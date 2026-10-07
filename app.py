@@ -1,224 +1,954 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Geometry Dash - Streamlit Edition", layout="centered")
+st.set_page_config(
+    page_title="Geometry Dash - Custom Level",
+    layout="centered"
+)
 
-st.title("🟨 Geometry Dash: Streamlit Edition")
-st.caption("Nhấn **SPACEBAR** hoặc **CLICK CHUỘT** vào khung game để nhảy qua chướng ngại vật!")
+st.title("🟨 Geometry Dash - Custom Level")
+st.caption("SPACE / ↑ / CLICK để nhảy • R để chơi lại")
 
-# Mã Game Geometry Dash viết bằng HTML5 Canvas + JS
-gd_game_code = """
+gd_game_code = r"""
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        body { 
-            margin: 0; 
-            background-color: #0d0e15; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-family: Arial, sans-serif;
-        }
-        canvas { 
-            border: 3px solid #00f0ff; 
-            box-shadow: 0 0 20px #00f0ff; 
-            background: linear-gradient(180deg, #0f0c29, #302b63, #24243e);
-            cursor: pointer;
-        }
-    </style>
+<meta charset="UTF-8">
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #080b18;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+    }
+
+    canvas {
+        border: 3px solid #00eaff;
+        box-shadow: 0 0 25px #00eaff;
+        cursor: pointer;
+        background: #15183b;
+    }
+</style>
 </head>
+
 <body>
-    <canvas id="gdCanvas" width="700" height="400"></canvas>
+
+<canvas id="game" width="900" height="500"></canvas>
 
 <script>
-const canvas = document.getElementById("gdCanvas");
+
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// Cấu hình vật lý & Trạng thái game
-const gravity = 0.65;
+
+// =========================
+// GAME SETTINGS
+// =========================
+
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+
+const FLOOR = 400;
+
+let cameraX = 0;
 let gameSpeed = 6;
+
 let score = 0;
+let attempts = 1;
+
 let gameOver = false;
 let gameWon = false;
 
-// Nhân vật khối vuông (Cube)
+
+// =========================
+// PLAYER
+// =========================
+
 const player = {
-    x: 100,
-    y: 280,
-    size: 40,
-    dy: 0,
-    jumpForce: -12,
-    isGrounded: false,
+
+    x: 160,
+    y: FLOOR - 42,
+
+    size: 42,
+
+    velocityY: 0,
+
+    gravity: 0.72,
+    jumpPower: -14,
+
+    grounded: false,
+
     rotation: 0,
-    color: '#00ffcc'
+
+    color: "#00ffcc"
 };
 
-// Sàn nhà
-const floorY = 320;
 
-// Danh sách chướng ngại vật (Gai nhọn - Triangles)
-let obstacles = [];
+// =========================
+// FIXED LEVEL
+// =========================
+//
+// Không spawn ngẫu nhiên nữa.
+// Map được thiết kế cố định.
+// =========================
 
-function spawnObstacle() {
-    // Tạo khoảng cách ngẫu nhiên giữa các gai
-    if (obstacles.length === 0 || canvas.width - obstacles[obstacles.length - 1].x > 220 + Math.random() * 150) {
-        obstacles.push({
-            x: canvas.width,
-            y: floorY,
-            size: 40,
-            type: 'spike'
-        });
+const level = [
+
+    // ---- START ----
+
+    {type:"spike", x:700, y:FLOOR, w:42, h:42},
+
+    {type:"spike", x:900, y:FLOOR, w:42, h:42},
+    {type:"spike", x:942, y:FLOOR, w:42, h:42},
+
+    {type:"spike", x:1200, y:FLOOR, w:42, h:42},
+
+    // ---- BLOCK ----
+
+    {type:"block", x:1450, y:FLOOR-42, w:42, h:42},
+    {type:"spike", x:1530, y:FLOOR, w:42, h:42},
+
+    {type:"block", x:1650, y:FLOOR-42, w:42, h:42},
+    {type:"block", x:1692, y:FLOOR-42, w:42, h:42},
+
+    {type:"spike", x:1810, y:FLOOR, w:42, h:42},
+
+    // ---- DOUBLE SPIKE ----
+
+    {type:"spike", x:2050, y:FLOOR, w:42, h:42},
+    {type:"spike", x:2092, y:FLOOR, w:42, h:42},
+
+    // ---- STAIRS ----
+
+    {type:"block", x:2300, y:FLOOR-42, w:42, h:42},
+    {type:"block", x:2342, y:FLOOR-84, w:42, h:84},
+
+    {type:"block", x:2384, y:FLOOR-126, w:42, h:126},
+
+    {type:"spike", x:2470, y:FLOOR-42, w:42, h:42},
+
+    // ---- LOW SECTION ----
+
+    {type:"block", x:2700, y:FLOOR-42, w:42, h:42},
+    {type:"block", x:2742, y:FLOOR-42, w:42, h:42},
+
+    {type:"spike", x:2870, y:FLOOR, w:42, h:42},
+
+    // ---- BIG JUMP ----
+
+    {type:"spike", x:3150, y:FLOOR, w:42, h:42},
+    {type:"spike", x:3192, y:FLOOR, w:42, h:42},
+
+    {type:"spike", x:3400, y:FLOOR, w:42, h:42},
+
+    // ---- PLATFORM ----
+
+    {type:"block", x:3650, y:FLOOR-42, w:42, h:42},
+    {type:"block", x:3692, y:FLOOR-42, w:42, h:42},
+    {type:"block", x:3734, y:FLOOR-42, w:42, h:42},
+
+    {type:"spike", x:3830, y:FLOOR, w:42, h:42},
+
+    // ---- FINAL SECTION ----
+
+    {type:"spike", x:4100, y:FLOOR, w:42, h:42},
+    {type:"spike", x:4142, y:FLOOR, w:42, h:42},
+
+    {type:"block", x:4350, y:FLOOR-42, w:42, h:42},
+
+    {type:"spike", x:4480, y:FLOOR, w:42, h:42},
+
+    {type:"spike", x:4650, y:FLOOR, w:42, h:42},
+    {type:"spike", x:4692, y:FLOOR, w:42, h:42},
+
+    {type:"finish", x:5000, y:0, w:20, h:FLOOR}
+
+];
+
+
+// =========================
+// INPUT
+// =========================
+
+function jump() {
+
+    if (gameOver || gameWon) {
+
+        restart();
+
+        return;
     }
+
+    if (player.grounded) {
+
+        player.velocityY = player.jumpPower;
+
+        player.grounded = false;
+
+    }
+
 }
 
-// Lắng nghe thao tác Nhảy (Spacebar hoặc Click chuột)
-function doJump() {
-    if (player.isGrounded && !gameOver) {
-        player.dy = player.jumpForce;
-        player.isGrounded = false;
-    }
-    if (gameOver) {
-        restartGame();
-    }
-}
 
-window.addEventListener("keydown", e => {
-    if (e.code === "Space" || e.code === "ArrowUp") {
+window.addEventListener("keydown", function(e) {
+
+    if (
+        e.code === "Space" ||
+        e.code === "ArrowUp"
+    ) {
+
         e.preventDefault();
-        doJump();
+
+        jump();
+
     }
+
+    if (e.code === "KeyR") {
+
+        restart();
+
+    }
+
 });
-canvas.addEventListener("mousedown", doJump);
 
-function restartGame() {
-    player.y = floorY - player.size;
-    player.dy = 0;
+
+canvas.addEventListener("mousedown", jump);
+
+
+// =========================
+// RESTART
+// =========================
+
+function restart() {
+
+    player.x = 160;
+    player.y = FLOOR - player.size;
+
+    player.velocityY = 0;
+
     player.rotation = 0;
-    player.isGrounded = true;
-    obstacles = [];
+
+    player.grounded = true;
+
+    cameraX = 0;
+
     score = 0;
+
     gameOver = false;
+    gameWon = false;
+
+    attempts++;
+
 }
 
-// Vòng lặp cập nhật Game (Update Loop)
+
+// =========================
+// COLLISION
+// =========================
+
+function collision(a, b) {
+
+    return (
+
+        a.x < b.x + b.w &&
+        a.x + a.size > b.x &&
+
+        a.y < b.y + b.h &&
+        a.y + a.size > b.y
+
+    );
+
+}
+
+
+// =========================
+// UPDATE
+// =========================
+
 function update() {
-    if (gameOver) return;
 
-    // Trọng lực & Nhảy
-    player.dy += gravity;
-    player.y += player.dy;
+    if (gameOver || gameWon)
+        return;
 
-    // Xử lý va chạm sàn
-    if (player.y + player.size >= floorY) {
-        player.y = floorY - player.size;
-        player.dy = 0;
-        player.isGrounded = true;
-        // Căn góc xoay về bội số 90 độ khi chạm đất
-        player.rotation = Math.round(player.rotation / 90) * 90;
-    } else {
-        // Xoay khối vuông khi đang trên không
-        player.rotation += 8;
+
+    // Player movement
+
+    player.velocityY += player.gravity;
+
+    player.y += player.velocityY;
+
+
+    // Ground
+
+    if (player.y + player.size >= FLOOR) {
+
+        player.y = FLOOR - player.size;
+
+        player.velocityY = 0;
+
+        player.grounded = true;
+
+        player.rotation =
+            Math.round(player.rotation / 90) * 90;
+
     }
 
-    // Di chuyển chướng ngại vật & tính điểm
-    obstacles.forEach((obs, index) => {
-        obs.x -= gameSpeed;
+    else {
 
-        // Xử lý va chạm Hitbox (Gai nhọn dạng tam giác)
-        // Kiểm tra va chạm đơn giản giữa 2 hộp bounding box
-        if (player.x < obs.x + obs.size - 10 &&
-            player.x + player.size - 10 > obs.x &&
-            player.y + player.size > obs.y - obs.size) {
-            gameOver = true;
+        player.grounded = false;
+
+        player.rotation += 8;
+
+    }
+
+
+    // Camera
+
+    cameraX += gameSpeed;
+
+
+    // Collision with objects
+
+    for (const obj of level) {
+
+        const screenX = obj.x - cameraX + 160;
+
+
+        if (obj.type === "spike") {
+
+            const hitbox = {
+
+                x: screenX + 6,
+
+                y: obj.y - obj.h + 8,
+
+                w: obj.w - 12,
+
+                h: obj.h - 8
+
+            };
+
+
+            if (collision(player, hitbox)) {
+
+                gameOver = true;
+
+            }
+
         }
 
-        // Xóa gai đã đi qua màn hình
-        if (obs.x + obs.size < 0) {
-            obstacles.splice(index, 1);
-            score += 1;
-        }
-    });
 
-    spawnObstacle();
+        if (obj.type === "block") {
+
+            const block = {
+
+                x: screenX,
+
+                y: obj.y,
+
+                w: obj.w,
+
+                h: obj.h
+
+            };
+
+
+            if (collision(player, block)) {
+
+                // Landing on top
+
+                if (
+                    player.velocityY >= 0 &&
+                    player.y + player.size <= block.y + 15
+                ) {
+
+                    player.y = block.y - player.size;
+
+                    player.velocityY = 0;
+
+                    player.grounded = true;
+
+                }
+
+                else {
+
+                    gameOver = true;
+
+                }
+
+            }
+
+        }
+
+
+        if (obj.type === "finish") {
+
+            if (screenX < player.x + player.size) {
+
+                gameWon = true;
+
+            }
+
+        }
+
+    }
+
+
+    score = Math.floor(cameraX / 10);
+
 }
 
-// Vẽ Đồ họa (Render)
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Vẽ sàn nhà
-    ctx.fillStyle = "#00f0ff";
-    ctx.fillRect(0, floorY, canvas.width, 4);
-    ctx.fillStyle = "#0a0a16";
-    ctx.fillRect(0, floorY + 4, canvas.width, canvas.height - floorY);
+// =========================
+// DRAW BACKGROUND
+// =========================
 
-    // 2. Vẽ Gai nhọn (Tam giác Geometry Dash)
-    obstacles.forEach(obs => {
-        ctx.fillStyle = "#ff0055";
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
+function drawBackground() {
+
+    // Gradient sky
+
+    const gradient =
+        ctx.createLinearGradient(0, 0, 0, HEIGHT);
+
+    gradient.addColorStop(0, "#17154b");
+    gradient.addColorStop(1, "#29245c");
+
+    ctx.fillStyle = gradient;
+
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+
+    // Background mountains
+
+    ctx.fillStyle = "#202052";
+
+    for (let i = -500; i < 3000; i += 220) {
+
+        let x = i - (cameraX * 0.25) % 220;
+
         ctx.beginPath();
-        ctx.moveTo(obs.x, obs.y);
-        ctx.lineTo(obs.x + obs.size / 2, obs.y - obs.size);
-        ctx.lineTo(obs.x + obs.size, obs.y);
+
+        ctx.moveTo(x, FLOOR);
+
+        ctx.lineTo(x + 110, 220);
+
+        ctx.lineTo(x + 220, FLOOR);
+
         ctx.closePath();
+
         ctx.fill();
+
+    }
+
+
+    // Background grid
+
+    ctx.strokeStyle = "rgba(0,240,255,0.08)";
+
+    ctx.lineWidth = 1;
+
+    for (let x = 0; x < WIDTH; x += 45) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, 0);
+
+        ctx.lineTo(x, FLOOR);
+
         ctx.stroke();
-    });
 
-    // 3. Vẽ Khối vuông người chơi (Có hiệu ứng xoay)
+    }
+
+    for (let y = 40; y < FLOOR; y += 45) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, y);
+
+        ctx.lineTo(WIDTH, y);
+
+        ctx.stroke();
+
+    }
+
+}
+
+
+// =========================
+// DRAW FLOOR
+// =========================
+
+function drawFloor() {
+
+    ctx.fillStyle = "#08091a";
+
+    ctx.fillRect(
+        0,
+        FLOOR,
+        WIDTH,
+        HEIGHT - FLOOR
+    );
+
+
+    ctx.fillStyle = "#00eaff";
+
+    ctx.fillRect(
+        0,
+        FLOOR,
+        WIDTH,
+        5
+    );
+
+
+    // Moving floor pattern
+
+    ctx.strokeStyle = "rgba(0,240,255,0.25)";
+
+    for (
+        let x = -(cameraX % 50);
+        x < WIDTH;
+        x += 50
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, FLOOR + 5);
+
+        ctx.lineTo(x - 25, HEIGHT);
+
+        ctx.stroke();
+
+    }
+
+}
+
+
+// =========================
+// DRAW LEVEL
+// =========================
+
+function drawLevel() {
+
+    for (const obj of level) {
+
+        const x =
+            obj.x - cameraX + 160;
+
+
+        if (
+            x < -100 ||
+            x > WIDTH + 100
+        )
+            continue;
+
+
+        // SPIKE
+
+        if (obj.type === "spike") {
+
+            ctx.fillStyle = "#ff145c";
+
+            ctx.strokeStyle = "#ffffff";
+
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                x,
+                obj.y
+            );
+
+            ctx.lineTo(
+                x + obj.w / 2,
+                obj.y - obj.h
+            );
+
+            ctx.lineTo(
+                x + obj.w,
+                obj.y
+            );
+
+            ctx.closePath();
+
+            ctx.fill();
+
+            ctx.stroke();
+
+        }
+
+
+        // BLOCK
+
+        if (obj.type === "block") {
+
+            ctx.fillStyle = "#3a36a3";
+
+            ctx.fillRect(
+                x,
+                obj.y,
+                obj.w,
+                obj.h
+            );
+
+
+            ctx.strokeStyle = "#00eaff";
+
+            ctx.lineWidth = 2;
+
+            ctx.strokeRect(
+                x,
+                obj.y,
+                obj.w,
+                obj.h
+            );
+
+
+            // Inner square
+
+            ctx.strokeStyle =
+                "rgba(255,255,255,0.3)";
+
+            ctx.strokeRect(
+                x + 7,
+                obj.y + 7,
+                obj.w - 14,
+                obj.h - 14
+            );
+
+        }
+
+
+        // FINISH
+
+        if (obj.type === "finish") {
+
+            ctx.fillStyle = "#00ff88";
+
+            ctx.fillRect(
+                x,
+                100,
+                8,
+                FLOOR - 100
+            );
+
+        }
+
+    }
+
+}
+
+
+// =========================
+// DRAW PLAYER
+// =========================
+
+function drawPlayer() {
+
     ctx.save();
-    ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
-    ctx.rotate((player.rotation * Math.PI) / 180);
 
-    // Thân nhân vật
-    ctx.fillStyle = player.color;
-    ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
-    ctx.strokeStyle = "#ffffff";
+
+    ctx.translate(
+        player.x + player.size / 2,
+        player.y + player.size / 2
+    );
+
+
+    ctx.rotate(
+        player.rotation *
+        Math.PI / 180
+    );
+
+
+    // Glow
+
+    ctx.shadowBlur = 15;
+
+    ctx.shadowColor = "#00ffcc";
+
+
+    // Cube
+
+    ctx.fillStyle =
+        player.color;
+
+    ctx.fillRect(
+        -player.size / 2,
+        -player.size / 2,
+        player.size,
+        player.size
+    );
+
+
+    ctx.shadowBlur = 0;
+
+
+    // Border
+
+    ctx.strokeStyle =
+        "#ffffff";
+
     ctx.lineWidth = 3;
-    ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
 
-    // Mắt nhân vật (Phong cách Geometry Dash)
-    ctx.fillStyle = "#000";
-    ctx.fillRect(-player.size / 4, -player.size / 4, 8, 8);
-    ctx.fillRect(player.size / 8, -player.size / 4, 8, 8);
+    ctx.strokeRect(
+        -player.size / 2,
+        -player.size / 2,
+        player.size,
+        player.size
+    );
+
+
+    // Eyes
+
+    ctx.fillStyle = "#071016";
+
+    ctx.fillRect(
+        -12,
+        -10,
+        8,
+        8
+    );
+
+    ctx.fillRect(
+        5,
+        -10,
+        8,
+        8
+    );
+
+
+    // Mouth
+
+    ctx.fillRect(
+        -10,
+        7,
+        20,
+        5
+    );
+
 
     ctx.restore();
 
-    // 4. In Điểm số
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 22px Arial";
-    ctx.fillText("Score: " + score, 20, 40);
-
-    // 5. Màn hình Game Over
-    if (gameOver) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#ff0055";
-        ctx.font = "bold 40px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("ATTEMPT FAILED!", canvas.width / 2, canvas.height / 2 - 20);
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "18px Arial";
-        ctx.fillText("Điểm của bạn: " + score, canvas.width / 2, canvas.height / 2 + 20);
-        ctx.fillText("Click chuột hoặc nhấn SPACEBAR để chơi lại", canvas.width / 2, canvas.height / 2 + 60);
-        ctx.textAlign = "left";
-    }
 }
+
+
+// =========================
+// HUD
+// =========================
+
+function drawHUD() {
+
+    ctx.fillStyle = "#ffffff";
+
+    ctx.font =
+        "bold 20px Arial";
+
+    ctx.fillText(
+        "ATTEMPT " + attempts,
+        20,
+        30
+    );
+
+
+    ctx.fillText(
+        "SCORE " + score,
+        20,
+        58
+    );
+
+
+    // Progress bar
+
+    const progress =
+        Math.min(
+            cameraX / 4850,
+            1
+        );
+
+
+    ctx.fillStyle =
+        "rgba(255,255,255,0.2)";
+
+    ctx.fillRect(
+        200,
+        20,
+        500,
+        10
+    );
+
+
+    ctx.fillStyle =
+        "#00ffcc";
+
+    ctx.fillRect(
+        200,
+        20,
+        500 * progress,
+        10
+    );
+
+}
+
+
+// =========================
+// GAME OVER
+// =========================
+
+function drawGameOver() {
+
+    if (!gameOver && !gameWon)
+        return;
+
+
+    ctx.fillStyle =
+        "rgba(0,0,0,0.72)";
+
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    ctx.textAlign =
+        "center";
+
+
+    if (gameWon) {
+
+        ctx.fillStyle =
+            "#00ff88";
+
+        ctx.font =
+            "bold 55px Arial";
+
+        ctx.fillText(
+            "LEVEL COMPLETE!",
+            WIDTH / 2,
+            220
+        );
+
+        ctx.font =
+            "22px Arial";
+
+        ctx.fillStyle =
+            "#ffffff";
+
+        ctx.fillText(
+            "Bạn đã hoàn thành màn chơi!",
+            WIDTH / 2,
+            265
+        );
+
+        ctx.fillText(
+            "CLICK hoặc SPACE để chơi lại",
+            WIDTH / 2,
+            310
+        );
+
+    }
+
+    else {
+
+        ctx.fillStyle =
+            "#ff145c";
+
+        ctx.font =
+            "bold 55px Arial";
+
+        ctx.fillText(
+            "ATTEMPT FAILED!",
+            WIDTH / 2,
+            220
+        );
+
+
+        ctx.fillStyle =
+            "#ffffff";
+
+        ctx.font =
+            "22px Arial";
+
+        ctx.fillText(
+            "Score: " + score,
+            WIDTH / 2,
+            265
+        );
+
+        ctx.fillText(
+            "CLICK / SPACE để thử lại",
+            WIDTH / 2,
+            310
+        );
+
+    }
+
+
+    ctx.textAlign =
+        "left";
+
+}
+
+
+// =========================
+// MAIN LOOP
+// =========================
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+
+    drawBackground();
+
+    drawFloor();
+
+    drawLevel();
+
+    drawPlayer();
+
+    drawHUD();
+
+    drawGameOver();
+
+}
+
 
 function gameLoop() {
+
     update();
+
     draw();
-    requestAnimationFrame(gameLoop);
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
 }
 
+
+player.grounded = true;
+
 gameLoop();
+
 </script>
+
 </body>
 </html>
 """
 
-components.html(gd_game_code, height=430)
+components.html(
+    gd_game_code,
+    height=530,
+    scrolling=False
+)
