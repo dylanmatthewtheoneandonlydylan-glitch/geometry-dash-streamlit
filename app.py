@@ -1,954 +1,251 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="Geometry Dash - Custom Level",
-    layout="centered"
-)
+st.set_page_config(page_title="Geometry Dash Streamlit", layout="centered")
 
-st.title("🟨 Geometry Dash - Custom Level")
-st.caption("SPACE / ↑ / CLICK để nhảy • R để chơi lại")
+st.title("🏃 Geometry Dash 2D")
+st.caption("Nhấn **SPACE** (phím Cách) hoặc **Click chuột** để nhảy qua chướng ngại vật!")
 
-gd_game_code = r"""
+# HTML5 Canvas Game Code
+game_html = """
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-
-<style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        background: #080b18;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: Arial, sans-serif;
-    }
-
-    canvas {
-        border: 3px solid #00eaff;
-        box-shadow: 0 0 25px #00eaff;
-        cursor: pointer;
-        background: #15183b;
-    }
-</style>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0d0f18;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        canvas {
+            border: 4px solid #00f0ff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+            border-radius: 8px;
+            background: linear-gradient(180deg, #1a0b2e 0%, #000000 100%);
+        }
+        #info {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
 </head>
-
 <body>
 
-<canvas id="game" width="900" height="500"></canvas>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+<div id="info">Nhấn SPACE để bắt đầu!</div>
 
 <script>
-
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const info = document.getElementById("info");
 
-
-// =========================
-// GAME SETTINGS
-// =========================
-
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
-
-const FLOOR = 400;
-
-let cameraX = 0;
-let gameSpeed = 6;
-
+// Game Settings & State
+let gameState = "START"; // START, PLAYING, GAMEOVER
 let score = 0;
-let attempts = 1;
+let highScore = 0;
+let speed = 6;
+let frameCount = 0;
 
-let gameOver = false;
-let gameWon = false;
-
-
-// =========================
-// PLAYER
-// =========================
-
+// Player (Square Cube)
 const player = {
-
-    x: 160,
-    y: FLOOR - 42,
-
-    size: 42,
-
-    velocityY: 0,
-
-    gravity: 0.72,
-    jumpPower: -14,
-
-    grounded: false,
-
-    rotation: 0,
-
-    color: "#00ffcc"
+    x: 100,
+    y: 300,
+    size: 35,
+    vy: 0,
+    gravity: 0.8,
+    jumpPower: -13.5,
+    isGrounded: false,
+    rotation: 0
 };
 
+// Floor Level
+const floorY = 330;
 
-// =========================
-// FIXED LEVEL
-// =========================
-//
-// Không spawn ngẫu nhiên nữa.
-// Map được thiết kế cố định.
-// =========================
+// Obstacles Array
+let obstacles = [];
 
-const level = [
-
-    // ---- START ----
-
-    {type:"spike", x:700, y:FLOOR, w:42, h:42},
-
-    {type:"spike", x:900, y:FLOOR, w:42, h:42},
-    {type:"spike", x:942, y:FLOOR, w:42, h:42},
-
-    {type:"spike", x:1200, y:FLOOR, w:42, h:42},
-
-    // ---- BLOCK ----
-
-    {type:"block", x:1450, y:FLOOR-42, w:42, h:42},
-    {type:"spike", x:1530, y:FLOOR, w:42, h:42},
-
-    {type:"block", x:1650, y:FLOOR-42, w:42, h:42},
-    {type:"block", x:1692, y:FLOOR-42, w:42, h:42},
-
-    {type:"spike", x:1810, y:FLOOR, w:42, h:42},
-
-    // ---- DOUBLE SPIKE ----
-
-    {type:"spike", x:2050, y:FLOOR, w:42, h:42},
-    {type:"spike", x:2092, y:FLOOR, w:42, h:42},
-
-    // ---- STAIRS ----
-
-    {type:"block", x:2300, y:FLOOR-42, w:42, h:42},
-    {type:"block", x:2342, y:FLOOR-84, w:42, h:84},
-
-    {type:"block", x:2384, y:FLOOR-126, w:42, h:126},
-
-    {type:"spike", x:2470, y:FLOOR-42, w:42, h:42},
-
-    // ---- LOW SECTION ----
-
-    {type:"block", x:2700, y:FLOOR-42, w:42, h:42},
-    {type:"block", x:2742, y:FLOOR-42, w:42, h:42},
-
-    {type:"spike", x:2870, y:FLOOR, w:42, h:42},
-
-    // ---- BIG JUMP ----
-
-    {type:"spike", x:3150, y:FLOOR, w:42, h:42},
-    {type:"spike", x:3192, y:FLOOR, w:42, h:42},
-
-    {type:"spike", x:3400, y:FLOOR, w:42, h:42},
-
-    // ---- PLATFORM ----
-
-    {type:"block", x:3650, y:FLOOR-42, w:42, h:42},
-    {type:"block", x:3692, y:FLOOR-42, w:42, h:42},
-    {type:"block", x:3734, y:FLOOR-42, w:42, h:42},
-
-    {type:"spike", x:3830, y:FLOOR, w:42, h:42},
-
-    // ---- FINAL SECTION ----
-
-    {type:"spike", x:4100, y:FLOOR, w:42, h:42},
-    {type:"spike", x:4142, y:FLOOR, w:42, h:42},
-
-    {type:"block", x:4350, y:FLOOR-42, w:42, h:42},
-
-    {type:"spike", x:4480, y:FLOOR, w:42, h:42},
-
-    {type:"spike", x:4650, y:FLOOR, w:42, h:42},
-    {type:"spike", x:4692, y:FLOOR, w:42, h:42},
-
-    {type:"finish", x:5000, y:0, w:20, h:FLOOR}
-
-];
-
-
-// =========================
-// INPUT
-// =========================
-
+// Handle Keyboard & Click Inputs
 function jump() {
-
-    if (gameOver || gameWon) {
-
-        restart();
-
-        return;
+    if (gameState === "START" || gameState === "GAMEOVER") {
+        resetGame();
+        gameState = "PLAYING";
+        info.innerText = "Score: 0";
+    } else if (gameState === "PLAYING" && player.isGrounded) {
+        player.vy = player.jumpPower;
+        player.isGrounded = false;
     }
-
-    if (player.grounded) {
-
-        player.velocityY = player.jumpPower;
-
-        player.grounded = false;
-
-    }
-
 }
 
-
-window.addEventListener("keydown", function(e) {
-
-    if (
-        e.code === "Space" ||
-        e.code === "ArrowUp"
-    ) {
-
+window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
-
         jump();
-
     }
-
-    if (e.code === "KeyR") {
-
-        restart();
-
-    }
-
 });
-
 
 canvas.addEventListener("mousedown", jump);
 
-
-// =========================
-// RESTART
-// =========================
-
-function restart() {
-
-    player.x = 160;
-    player.y = FLOOR - player.size;
-
-    player.velocityY = 0;
-
+function resetGame() {
+    player.y = floorY - player.size;
+    player.vy = 0;
     player.rotation = 0;
-
-    player.grounded = true;
-
-    cameraX = 0;
-
+    player.isGrounded = true;
+    obstacles = [];
     score = 0;
-
-    gameOver = false;
-    gameWon = false;
-
-    attempts++;
-
+    speed = 6;
+    frameCount = 0;
 }
 
+// Spawn Balanced Obstacles
+function spawnObstacle() {
+    // Tới khoảng trắng ban đầu (khoảng 120 frames ~ 2 giây đầu không có chướng ngại vật)
+    if (frameCount < 120) return;
 
-// =========================
-// COLLISION
-// =========================
-
-function collision(a, b) {
-
-    return (
-
-        a.x < b.x + b.w &&
-        a.x + a.size > b.x &&
-
-        a.y < b.y + b.h &&
-        a.y + a.size > b.y
-
-    );
-
+    // Khoảng cách nhịp xuất hiện cân bằng (từ 70 - 110 frames)
+    let minGap = 70;
+    let maxGap = 110;
+    
+    if (obstacles.length === 0 || (frameCount - obstacles[obstacles.length - 1].spawnFrame) > Math.random() * (maxGap - minGap) + minGap) {
+        let type = Math.random() < 0.7 ? "spike" : "block";
+        obstacles.push({
+            x: canvas.width + 50,
+            width: 35,
+            height: 35,
+            type: type,
+            spawnFrame: frameCount
+        });
+    }
 }
-
-
-// =========================
-// UPDATE
-// =========================
 
 function update() {
+    if (gameState !== "PLAYING") return;
 
-    if (gameOver || gameWon)
-        return;
+    frameCount++;
+    score = Math.floor(frameCount / 10);
 
+    // Tăng tốc độ rất nhẹ theo thời gian
+    speed = 6 + Math.min(score / 500, 3);
 
-    // Player movement
+    // Physics Update
+    player.vy += player.gravity;
+    player.y += player.vy;
 
-    player.velocityY += player.gravity;
-
-    player.y += player.velocityY;
-
-
-    // Ground
-
-    if (player.y + player.size >= FLOOR) {
-
-        player.y = FLOOR - player.size;
-
-        player.velocityY = 0;
-
-        player.grounded = true;
-
-        player.rotation =
-            Math.round(player.rotation / 90) * 90;
-
+    // Floor collision
+    if (player.y + player.size >= floorY) {
+        player.y = floorY - player.size;
+        player.vy = 0;
+        player.isGrounded = true;
+        // Snap rotation to 90-degree grid when landing
+        player.rotation = Math.round(player.rotation / (Math.PI / 2)) * (Math.PI / 2);
+    } else {
+        // Rotate cube in air
+        player.rotation += 0.12;
     }
 
-    else {
-
-        player.grounded = false;
-
-        player.rotation += 8;
-
-    }
-
-
-    // Camera
-
-    cameraX += gameSpeed;
-
-
-    // Collision with objects
-
-    for (const obj of level) {
-
-        const screenX = obj.x - cameraX + 160;
-
-
-        if (obj.type === "spike") {
-
-            const hitbox = {
-
-                x: screenX + 6,
-
-                y: obj.y - obj.h + 8,
-
-                w: obj.w - 12,
-
-                h: obj.h - 8
-
-            };
-
-
-            if (collision(player, hitbox)) {
-
-                gameOver = true;
-
-            }
-
-        }
-
-
-        if (obj.type === "block") {
-
-            const block = {
-
-                x: screenX,
-
-                y: obj.y,
-
-                w: obj.w,
-
-                h: obj.h
-
-            };
-
-
-            if (collision(player, block)) {
-
-                // Landing on top
-
-                if (
-                    player.velocityY >= 0 &&
-                    player.y + player.size <= block.y + 15
-                ) {
-
-                    player.y = block.y - player.size;
-
-                    player.velocityY = 0;
-
-                    player.grounded = true;
-
-                }
-
-                else {
-
-                    gameOver = true;
-
-                }
-
-            }
-
-        }
-
-
-        if (obj.type === "finish") {
-
-            if (screenX < player.x + player.size) {
-
-                gameWon = true;
-
-            }
-
-        }
-
-    }
-
-
-    score = Math.floor(cameraX / 10);
-
-}
-
-
-// =========================
-// DRAW BACKGROUND
-// =========================
-
-function drawBackground() {
-
-    // Gradient sky
-
-    const gradient =
-        ctx.createLinearGradient(0, 0, 0, HEIGHT);
-
-    gradient.addColorStop(0, "#17154b");
-    gradient.addColorStop(1, "#29245c");
-
-    ctx.fillStyle = gradient;
-
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-
-    // Background mountains
-
-    ctx.fillStyle = "#202052";
-
-    for (let i = -500; i < 3000; i += 220) {
-
-        let x = i - (cameraX * 0.25) % 220;
-
-        ctx.beginPath();
-
-        ctx.moveTo(x, FLOOR);
-
-        ctx.lineTo(x + 110, 220);
-
-        ctx.lineTo(x + 220, FLOOR);
-
-        ctx.closePath();
-
-        ctx.fill();
-
-    }
-
-
-    // Background grid
-
-    ctx.strokeStyle = "rgba(0,240,255,0.08)";
-
-    ctx.lineWidth = 1;
-
-    for (let x = 0; x < WIDTH; x += 45) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(x, 0);
-
-        ctx.lineTo(x, FLOOR);
-
-        ctx.stroke();
-
-    }
-
-    for (let y = 40; y < FLOOR; y += 45) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(0, y);
-
-        ctx.lineTo(WIDTH, y);
-
-        ctx.stroke();
-
-    }
-
-}
-
-
-// =========================
-// DRAW FLOOR
-// =========================
-
-function drawFloor() {
-
-    ctx.fillStyle = "#08091a";
-
-    ctx.fillRect(
-        0,
-        FLOOR,
-        WIDTH,
-        HEIGHT - FLOOR
-    );
-
-
-    ctx.fillStyle = "#00eaff";
-
-    ctx.fillRect(
-        0,
-        FLOOR,
-        WIDTH,
-        5
-    );
-
-
-    // Moving floor pattern
-
-    ctx.strokeStyle = "rgba(0,240,255,0.25)";
-
-    for (
-        let x = -(cameraX % 50);
-        x < WIDTH;
-        x += 50
-    ) {
-
-        ctx.beginPath();
-
-        ctx.moveTo(x, FLOOR + 5);
-
-        ctx.lineTo(x - 25, HEIGHT);
-
-        ctx.stroke();
-
-    }
-
-}
-
-
-// =========================
-// DRAW LEVEL
-// =========================
-
-function drawLevel() {
-
-    for (const obj of level) {
-
-        const x =
-            obj.x - cameraX + 160;
-
-
+    // Spawn & Move Obstacles
+    spawnObstacle();
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= speed;
+
+        // Collision Check (AABB / Triangle check simplified)
+        let hitMargin = 6; // Hitbox chuẩn không bị nổ oan
         if (
-            x < -100 ||
-            x > WIDTH + 100
-        )
-            continue;
-
-
-        // SPIKE
-
-        if (obj.type === "spike") {
-
-            ctx.fillStyle = "#ff145c";
-
-            ctx.strokeStyle = "#ffffff";
-
-            ctx.lineWidth = 2;
-
-            ctx.beginPath();
-
-            ctx.moveTo(
-                x,
-                obj.y
-            );
-
-            ctx.lineTo(
-                x + obj.w / 2,
-                obj.y - obj.h
-            );
-
-            ctx.lineTo(
-                x + obj.w,
-                obj.y
-            );
-
-            ctx.closePath();
-
-            ctx.fill();
-
-            ctx.stroke();
-
+            player.x + player.size - hitMargin > obs.x &&
+            player.x + hitMargin < obs.x + obs.width &&
+            player.y + player.size - hitMargin > floorY - obs.height
+        ) {
+            gameState = "GAMEOVER";
+            if (score > highScore) highScore = score;
+            info.innerText = `💥 GAME OVER! Score: ${score} | High Score: ${highScore} (Nhấn SPACE để chơi lại)`;
         }
 
-
-        // BLOCK
-
-        if (obj.type === "block") {
-
-            ctx.fillStyle = "#3a36a3";
-
-            ctx.fillRect(
-                x,
-                obj.y,
-                obj.w,
-                obj.h
-            );
-
-
-            ctx.strokeStyle = "#00eaff";
-
-            ctx.lineWidth = 2;
-
-            ctx.strokeRect(
-                x,
-                obj.y,
-                obj.w,
-                obj.h
-            );
-
-
-            // Inner square
-
-            ctx.strokeStyle =
-                "rgba(255,255,255,0.3)";
-
-            ctx.strokeRect(
-                x + 7,
-                obj.y + 7,
-                obj.w - 14,
-                obj.h - 14
-            );
-
+        // Remove out-of-screen obstacles
+        if (obs.x + obs.width < 0) {
+            obstacles.splice(i, 1);
         }
-
-
-        // FINISH
-
-        if (obj.type === "finish") {
-
-            ctx.fillStyle = "#00ff88";
-
-            ctx.fillRect(
-                x,
-                100,
-                8,
-                FLOOR - 100
-            );
-
-        }
-
     }
 
-}
-
-
-// =========================
-// DRAW PLAYER
-// =========================
-
-function drawPlayer() {
-
-    ctx.save();
-
-
-    ctx.translate(
-        player.x + player.size / 2,
-        player.y + player.size / 2
-    );
-
-
-    ctx.rotate(
-        player.rotation *
-        Math.PI / 180
-    );
-
-
-    // Glow
-
-    ctx.shadowBlur = 15;
-
-    ctx.shadowColor = "#00ffcc";
-
-
-    // Cube
-
-    ctx.fillStyle =
-        player.color;
-
-    ctx.fillRect(
-        -player.size / 2,
-        -player.size / 2,
-        player.size,
-        player.size
-    );
-
-
-    ctx.shadowBlur = 0;
-
-
-    // Border
-
-    ctx.strokeStyle =
-        "#ffffff";
-
-    ctx.lineWidth = 3;
-
-    ctx.strokeRect(
-        -player.size / 2,
-        -player.size / 2,
-        player.size,
-        player.size
-    );
-
-
-    // Eyes
-
-    ctx.fillStyle = "#071016";
-
-    ctx.fillRect(
-        -12,
-        -10,
-        8,
-        8
-    );
-
-    ctx.fillRect(
-        5,
-        -10,
-        8,
-        8
-    );
-
-
-    // Mouth
-
-    ctx.fillRect(
-        -10,
-        7,
-        20,
-        5
-    );
-
-
-    ctx.restore();
-
-}
-
-
-// =========================
-// HUD
-// =========================
-
-function drawHUD() {
-
-    ctx.fillStyle = "#ffffff";
-
-    ctx.font =
-        "bold 20px Arial";
-
-    ctx.fillText(
-        "ATTEMPT " + attempts,
-        20,
-        30
-    );
-
-
-    ctx.fillText(
-        "SCORE " + score,
-        20,
-        58
-    );
-
-
-    // Progress bar
-
-    const progress =
-        Math.min(
-            cameraX / 4850,
-            1
-        );
-
-
-    ctx.fillStyle =
-        "rgba(255,255,255,0.2)";
-
-    ctx.fillRect(
-        200,
-        20,
-        500,
-        10
-    );
-
-
-    ctx.fillStyle =
-        "#00ffcc";
-
-    ctx.fillRect(
-        200,
-        20,
-        500 * progress,
-        10
-    );
-
-}
-
-
-// =========================
-// GAME OVER
-// =========================
-
-function drawGameOver() {
-
-    if (!gameOver && !gameWon)
-        return;
-
-
-    ctx.fillStyle =
-        "rgba(0,0,0,0.72)";
-
-    ctx.fillRect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
-
-
-    ctx.textAlign =
-        "center";
-
-
-    if (gameWon) {
-
-        ctx.fillStyle =
-            "#00ff88";
-
-        ctx.font =
-            "bold 55px Arial";
-
-        ctx.fillText(
-            "LEVEL COMPLETE!",
-            WIDTH / 2,
-            220
-        );
-
-        ctx.font =
-            "22px Arial";
-
-        ctx.fillStyle =
-            "#ffffff";
-
-        ctx.fillText(
-            "Bạn đã hoàn thành màn chơi!",
-            WIDTH / 2,
-            265
-        );
-
-        ctx.fillText(
-            "CLICK hoặc SPACE để chơi lại",
-            WIDTH / 2,
-            310
-        );
-
+    if (gameState === "PLAYING") {
+        info.innerText = `Score: ${score} | High Score: ${highScore}`;
     }
-
-    else {
-
-        ctx.fillStyle =
-            "#ff145c";
-
-        ctx.font =
-            "bold 55px Arial";
-
-        ctx.fillText(
-            "ATTEMPT FAILED!",
-            WIDTH / 2,
-            220
-        );
-
-
-        ctx.fillStyle =
-            "#ffffff";
-
-        ctx.font =
-            "22px Arial";
-
-        ctx.fillText(
-            "Score: " + score,
-            WIDTH / 2,
-            265
-        );
-
-        ctx.fillText(
-            "CLICK / SPACE để thử lại",
-            WIDTH / 2,
-            310
-        );
-
-    }
-
-
-    ctx.textAlign =
-        "left";
-
 }
-
-
-// =========================
-// MAIN LOOP
-// =========================
 
 function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(
-        0,
-        0,
-        WIDTH,
-        HEIGHT
-    );
+    // Draw Floor
+    ctx.fillStyle = "#00f0ff";
+    ctx.fillRect(0, floorY, canvas.width, 4);
+    ctx.fillStyle = "#0a1128";
+    ctx.fillRect(0, floorY + 4, canvas.width, canvas.height - floorY);
 
+    // Draw Obstacles
+    for (let obs of obstacles) {
+        if (obs.type === "spike") {
+            ctx.fillStyle = "#ff0055";
+            ctx.beginPath();
+            ctx.moveTo(obs.x, floorY);
+            ctx.lineTo(obs.x + obs.width / 2, floorY - obs.height);
+            ctx.lineTo(obs.x + obs.width, floorY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = "#ff9900";
+            ctx.fillRect(obs.x, floorY - obs.height, obs.width, obs.height);
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(obs.x, floorY - obs.height, obs.width, obs.height);
+        }
+    }
 
-    drawBackground();
+    // Draw Player (Rotated Cube)
+    ctx.save();
+    ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
+    ctx.rotate(player.rotation);
+    ctx.fillStyle = "#00ffcc";
+    ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+    
+    // Player Eyes
+    ctx.fillStyle = "#000";
+    ctx.fillRect(2, -8, 6, 6);
+    ctx.fillRect(10, -8, 6, 6);
+    ctx.restore();
 
-    drawFloor();
-
-    drawLevel();
-
-    drawPlayer();
-
-    drawHUD();
-
-    drawGameOver();
-
+    // Start Screen
+    if (gameState === "START") {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#00f0ff";
+        ctx.font = " bold 28px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("NHẤN SPACE ĐỂ BẮT ĐẦU", canvas.width / 2, canvas.height / 2);
+    }
 }
-
 
 function gameLoop() {
-
     update();
-
     draw();
-
-    requestAnimationFrame(
-        gameLoop
-    );
-
+    requestAnimationFrame(gameLoop);
 }
 
-
-player.grounded = true;
-
 gameLoop();
-
 </script>
-
 </body>
 </html>
 """
 
-components.html(
-    gd_game_code,
-    height=530,
-    scrolling=False
-)
+components.html(game_html, height=480)
