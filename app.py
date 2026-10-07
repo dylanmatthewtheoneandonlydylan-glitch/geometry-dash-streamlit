@@ -1,12 +1,12 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Geometry Dash Streamlit", layout="centered")
+st.set_page_config(page_title="Geometry Dash Custom Skin", layout="centered")
 
-st.title("🏃 Geometry Dash - Stereo Madness")
-st.caption("Nhấn **SPACE** hoặc **Click chuột** để nhảy qua các chướng ngại vật và về đích!")
+st.title("🏃 Geometry Dash - Custom Face Edition")
+st.caption("Nhấn **SPACE** hoặc **Click chuột** để nhảy qua các chướng ngại vật!")
 
-# HTML5 Canvas Game Code - Designed Level Edition
+# HTML5 Canvas Game Code với Custom Image Skin
 game_html = """
 <!DOCTYPE html>
 <html>
@@ -25,9 +25,9 @@ game_html = """
         }
         canvas {
             border: 4px solid #00f0ff;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
             border-radius: 8px;
-            background: linear-gradient(180deg, #1a0b2e 0%, #000000 100%);
+            background: #000000;
         }
         #info {
             margin-top: 10px;
@@ -46,16 +46,20 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const info = document.getElementById("info");
 
+// Load Custom Skin Image (Khuôn mặt người chơi)
+const playerImg = new Image();
+playerImg.src = "https://i.imgur.com/8Q8S4wD.png"; // Ảnh khuôn mặt đã xử lý cắt khung vuông
+
 // Game State
-let gameState = "START"; // START, PLAYING, GAMEOVER, VICTORY
+let gameState = "START"; 
 let speed = 6;
 let distance = 0;
 
-// Player
+// Player Settings
 const player = {
     x: 120,
     y: 300,
-    size: 35,
+    size: 42, // Kích thước khối nhân vật
     vy: 0,
     gravity: 0.85,
     jumpPower: -13.8,
@@ -64,31 +68,21 @@ const player = {
 };
 
 const floorY = 330;
+const LEVEL_LENGTH = 3500;
 
-// THIẾT KẾ MÀN CHƠI CỐ ĐỊNH (Level Design giống Stereo Madness)
-// Vị trí (x) được tính từ lúc bắt đầu màn chơi
-const LEVEL_LENGTH = 3500; // Độ dài màn chơi
+// Thiết kế màn chơi với các chướng ngại vật
 const levelObstacles = [
-    // Đoạn đầu tập nhảy
     { x: 600, type: "spike" },
     { x: 900, type: "spike" },
     { x: 1200, type: "block" },
-    
-    // Cặp gai đôi
     { x: 1500, type: "spike" },
     { x: 1535, type: "spike" },
-    
-    // Khối hộp kết hợp gai
     { x: 1850, type: "block" },
     { x: 2000, type: "spike" },
     { x: 2200, type: "block" },
-    
-    // Thử thách 3 gai liên tiếp
     { x: 2500, type: "spike" },
     { x: 2535, type: "spike" },
     { x: 2570, type: "spike" },
-    
-    // Đoạn nước rút về đích
     { x: 2900, type: "block" },
     { x: 3100, type: "spike" },
     { x: 3135, type: "spike" }
@@ -122,13 +116,11 @@ function resetGame() {
     player.isGrounded = true;
     distance = 0;
     
-    // Khởi tạo lại chướng ngại vật từ Level Map
     activeObstacles = levelObstacles.map(obs => ({
         x: obs.x,
         width: 35,
         height: 35,
-        type: obs.type,
-        passed: false
+        type: obs.type
     }));
 }
 
@@ -138,7 +130,7 @@ function update() {
     distance += speed;
     let progress = Math.min(100, Math.floor((distance / LEVEL_LENGTH) * 100));
 
-    // Physics
+    // Gravity & Movement
     player.vy += player.gravity;
     player.y += player.vy;
 
@@ -148,70 +140,97 @@ function update() {
         player.isGrounded = true;
         player.rotation = Math.round(player.rotation / (Math.PI / 2)) * (Math.PI / 2);
     } else {
-        player.rotation += 0.15;
+        player.rotation += 0.15; // Xoay nhân vật khi trên không
     }
 
-    // Di chuyển chướng ngại vật & Check va chạm
+    // Check va chạm
     for (let obs of activeObstacles) {
         let currentX = obs.x - distance + player.x;
+        let hitMargin = 6;
 
-        // Va chạm chuẩn (Hitbox)
-        let hitMargin = 5;
         if (
             player.x + player.size - hitMargin > currentX &&
             player.x + hitMargin < currentX + obs.width &&
             player.y + player.size - hitMargin > floorY - obs.height
         ) {
             gameState = "GAMEOVER";
-            info.innerText = `💥 THẤT BẠI! Đã hoàn thành ${progress}% | Nhấn SPACE để thử lại`;
+            info.innerText = `💥 THẤT BẠI! Tiến độ: ${progress}% | Nhấn SPACE để chơi lại`;
         }
     }
 
-    // Kiểm tra VỀ ĐÍCH (Thắng)
+    // Về đích
     if (distance >= LEVEL_LENGTH) {
         gameState = "VICTORY";
-        info.innerText = `🎉 CHÚC MỪNG! BẠN ĐÃ HOÀN THÀNH MÀN CHƠI 100%!`;
+        info.innerText = `🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!`;
     } else {
         info.innerText = `Tiến độ: ${progress}%`;
     }
 }
 
+function drawBackground() {
+    // Vẽ nền Neon Cyberpunk
+    let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#1a0033");
+    grad.addColorStop(1, "#000000");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Dải đèn Neon trang trí phía trên
+    const colors = ["#ff0055", "#00f0ff", "#ffcc00", "#00ff66", "#cc00ff"];
+    for (let i = 0; i < 16; i++) {
+        let x = i * 55 - (distance * 0.2) % 55;
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.shadowColor = colors[i % colors.length];
+        ctx.shadowBlur = 10;
+        ctx.fillRect(x, 0, 8, 40 + (i % 3) * 25);
+    }
+    ctx.shadowBlur = 0; // Reset shadow
+}
+
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Vẽ Sàn
+    // 1. Vẽ nền
+    drawBackground();
+
+    // 2. Vẽ Sàn Neon
     ctx.fillStyle = "#00f0ff";
+    ctx.shadowColor = "#00f0ff";
+    ctx.shadowBlur = 12;
     ctx.fillRect(0, floorY, canvas.width, 4);
-    ctx.fillStyle = "#0a1128";
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#0d001a";
     ctx.fillRect(0, floorY + 4, canvas.width, canvas.height - floorY);
 
-    // Vẽ Thanh Tiến Độ (%) ở trên cùng
+    // 3. Thanh phần trăm tiến độ (%)
     let progressRatio = Math.min(1, distance / LEVEL_LENGTH);
     ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-    ctx.fillRect(200, 15, 400, 12);
+    ctx.fillRect(200, 15, 400, 10);
     ctx.fillStyle = "#00ffcc";
-    ctx.fillRect(200, 15, 400 * progressRatio, 12);
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(200, 15, 400, 12);
+    ctx.fillRect(200, 15, 400 * progressRatio, 10);
 
-    // Vẽ Cổng Về Đích (Finish Line)
+    // 4. Cổng Về Đích
     let finishX = LEVEL_LENGTH - distance + player.x;
     if (finishX < canvas.width + 100) {
         ctx.fillStyle = "#00ffcc";
-        ctx.fillRect(finishX, floorY - 120, 15, 120);
+        ctx.shadowColor = "#00ffcc";
+        ctx.shadowBlur = 15;
+        ctx.fillRect(finishX, floorY - 130, 15, 130);
+        ctx.shadowBlur = 0;
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 16px Arial";
-        ctx.fillText("FINISH", finishX - 15, floorY - 130);
+        ctx.fillText("FINISH", finishX - 15, floorY - 140);
     }
 
-    // Vẽ Chướng ngại vật
+    // 5. Vẽ Chướng ngại vật (Gai & Khối Neon)
     for (let obs of activeObstacles) {
         let currentX = obs.x - distance + player.x;
         
         if (currentX > -50 && currentX < canvas.width + 50) {
             if (obs.type === "spike") {
                 ctx.fillStyle = "#ff0055";
+                ctx.shadowColor = "#ff0055";
+                ctx.shadowBlur = 10;
                 ctx.beginPath();
                 ctx.moveTo(currentX, floorY);
                 ctx.lineTo(currentX + obs.width / 2, floorY - obs.height);
@@ -221,59 +240,65 @@ function draw() {
                 ctx.strokeStyle = "#ffffff";
                 ctx.lineWidth = 2;
                 ctx.stroke();
+                ctx.shadowBlur = 0;
             } else {
                 ctx.fillStyle = "#ff9900";
+                ctx.shadowColor = "#ff9900";
+                ctx.shadowBlur = 10;
                 ctx.fillRect(currentX, floorY - obs.height, obs.width, obs.height);
                 ctx.strokeStyle = "#ffffff";
                 ctx.lineWidth = 2;
                 ctx.strokeRect(currentX, floorY - obs.height, obs.width, obs.height);
+                ctx.shadowBlur = 0;
             }
         }
     }
 
-    // Vẽ Nhận vật Cube
+    // 6. Vẽ Nhân vật Skin Mặt Người
     ctx.save();
     ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
     ctx.rotate(player.rotation);
-    ctx.fillStyle = "#00ffcc";
-    ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
-    ctx.strokeStyle = "#ffffff";
+
+    // Vẽ viền Neon xung quanh mặt
+    ctx.strokeStyle = "#00f0ff";
     ctx.lineWidth = 3;
+    ctx.shadowColor = "#00f0ff";
+    ctx.shadowBlur = 10;
     ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
-    
-    // Mắt khối vuông
-    ctx.fillStyle = "#000";
-    ctx.fillRect(2, -8, 6, 6);
-    ctx.fillRect(10, -8, 6, 6);
+    ctx.shadowBlur = 0;
+
+    // Vẽ ảnh khuôn mặt vào khối vuông
+    if (playerImg.complete) {
+        ctx.drawImage(playerImg, -player.size / 2, -player.size / 2, player.size, player.size);
+    } else {
+        ctx.fillStyle = "#00ffcc";
+        ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+    }
     ctx.restore();
 
-    // Giao diện Màn hình Bắt đầu
+    // Giao diện Màn hình Bắt đầu / Thắng
     if (gameState === "START") {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00f0ff";
         ctx.font = "bold 28px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("STEREO MADNESS - LEVEL 1", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = "20px Arial";
+        ctx.fillText("FACE DASH - STEREO MADNESS", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = "18px Arial";
         ctx.fillStyle = "#ffffff";
-        ctx.fillText("Nhấn SPACE để Bắt Đầu", canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText("Nhấn SPACE để bắt đầu chơi!", canvas.width / 2, canvas.height / 2 + 30);
     }
 
-    // Giao diện MÀN HÌNH CHIẾN THẮNG (Victory Screen)
     if (gameState === "VICTORY") {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
         ctx.fillStyle = "#00ffcc";
         ctx.font = "bold 36px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("LEVEL COMPLETE! 100%", canvas.width / 2, canvas.height / 2 - 30);
-        
-        ctx.fillStyle = "#ffffff";
+        ctx.fillText("VICTORY! 100%", canvas.width / 2, canvas.height / 2 - 20);
         ctx.font = "20px Arial";
-        ctx.fillText("Chúc mừng! Bạn đã chinh phục thành công màn chơi!", canvas.width / 2, canvas.height / 2 + 15);
-        ctx.fillText("Nhấn SPACE để chơi lại", canvas.width / 2, canvas.height / 2 + 55);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("Chúc mừng bạn đã hoàn thành màn chơi!", canvas.width / 2, canvas.height / 2 + 25);
     }
 }
 
