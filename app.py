@@ -1437,20 +1437,45 @@ function draw() {
                 const isPillar = obs.type === "pillar";
                 const isBar = obs.type === "bar";
                 const obstacleY = floorY - obs.height;
-                const pillarColor = selectedDifficulty === "NORMAL" ? "#ff6a1a" : "#00d9ff";
-                ctx.fillStyle = isPillar ? pillarColor : (isBar ? "#ff3bd4" : "#ff9900");
-                ctx.shadowColor = isPillar ? pillarColor : (isBar ? "#ff3bd4" : "#ff9900");
-                ctx.shadowBlur = isBar ? 14 : 10;
+                // Khối chữ nhật xanh dương / hồng neon, đổi màu xen kẽ để màn chơi nổi bật.
+                const blockColor = (Math.floor(obs.x / 300) % 2 === 0) ? "#18c8ff" : "#ff4fd8";
+                const obstacleColor = isPillar ? "#18c8ff" : (isBar ? "#ff4fd8" : blockColor);
+                const edgeColor = isPillar ? "#b9f4ff" : (isBar ? "#ffd1f5" : (blockColor === "#18c8ff" ? "#b9f4ff" : "#ffd1f5"));
+
+                ctx.save();
+                ctx.shadowColor = obstacleColor;
+                ctx.shadowBlur = 18;
+                const blockGradient = ctx.createLinearGradient(currentX, obstacleY, currentX + obs.width, obstacleY + obs.height);
+                blockGradient.addColorStop(0, edgeColor);
+                blockGradient.addColorStop(0.28, obstacleColor);
+                blockGradient.addColorStop(1, blockColor === "#18c8ff" ? "#0754d8" : "#b20d91");
+                ctx.fillStyle = blockGradient;
                 ctx.fillRect(currentX, obstacleY, obs.width, obs.height);
+
+                // Viền neon sáng và đường trang trí bên trong khối.
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = edgeColor;
+                ctx.lineWidth = 2.5;
+                ctx.strokeRect(currentX + 1, obstacleY + 1, obs.width - 2, obs.height - 2);
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = "rgba(255,255,255,0.42)";
+                ctx.fillRect(currentX + 5, obstacleY + 5, Math.max(3, obs.width - 10), 3);
+                ctx.fillStyle = "rgba(255,255,255,0.18)";
+                ctx.fillRect(currentX + 5, obstacleY + 11, 3, Math.max(4, obs.height - 16));
+                if (obs.width >= 30 && obs.height >= 30) {
+                    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(currentX + 7, obstacleY + 7, obs.width - 14, obs.height - 14);
+                }
                 if (isBar) {
-                    // Hai đầu thanh nhô nhẹ giúp người chơi nhận ra đây là chướng ngại ngang.
+                    // Hai đầu thanh nhô nhẹ, cùng tông màu neon.
+                    ctx.fillStyle = obstacleColor;
+                    ctx.shadowColor = obstacleColor;
+                    ctx.shadowBlur = 14;
                     ctx.fillRect(currentX - 5, obstacleY - 4, 8, obs.height + 8);
                     ctx.fillRect(currentX + obs.width - 3, obstacleY - 4, 8, obs.height + 8);
                 }
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(currentX, obstacleY, obs.width, obs.height);
-                ctx.shadowBlur = 0;
+                ctx.restore();
             }
 
         }
