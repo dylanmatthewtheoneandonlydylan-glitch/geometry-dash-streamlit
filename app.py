@@ -140,6 +140,33 @@ let gameState = "START";
 let speed = 6;
 
 let distance = 0;
+let deathStarted = 0;
+let particles = [];
+let screenShake = 0;
+
+function startDeathEffect(cx, cy) {
+    gameState = "DYING";
+    deathStarted = performance.now();
+    screenShake = 12;
+    particles = [];
+
+    // Các mảnh neon bắn tung ra khi chạm gai
+    const colors = ["#ff1744", "#ff3d81", "#ffffff", "#00e5ff", "#ff9100"];
+    for (let i = 0; i < 34; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const power = 2 + Math.random() * 6;
+        particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(angle) * power,
+            vy: Math.sin(angle) * power - 1.5,
+            size: 3 + Math.random() * 7,
+            life: 1,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            spin: (Math.random() - 0.5) * 0.25,
+            rotation: Math.random() * Math.PI
+        });
+    }
+}
 
 
 // ============================================================
@@ -337,6 +364,8 @@ function resetGame() {
     player.isGrounded = true;
 
     distance = 0;
+    particles = [];
+    screenShake = 0;
 
     activeObstacles =
         levelObstacles.map(function(obs) {
@@ -364,10 +393,23 @@ function resetGame() {
 
 function update() {
 
-    if (gameState !== "PLAYING") {
+    if (gameState === "DYING") {
+        const elapsed = performance.now() - deathStarted;
+        for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.16;
+            p.vx *= 0.985;
+            p.life -= 0.022;
+            p.rotation += p.spin;
+        }
+        particles = particles.filter(p => p.life > 0);
+        screenShake *= 0.82;
+        if (elapsed > 700) gameState = "GAMEOVER";
         return;
     }
 
+    if (gameState !== "PLAYING") return;
 
     distance += speed;
 
@@ -452,17 +494,14 @@ function update() {
 
         ) {
 
-            gameState = "GAMEOVER";
+            startDeathEffect(
+                player.x + player.size / 2,
+                player.y + player.size / 2
+            );
 
             stopMusic();
-
             playDeathSound();
-
-            info.innerText =
-                "💥 THẤT BẠI! Tiến độ: " +
-                progress +
-                "% | Nhấn SPACE để chơi lại";
-
+            info.innerText = "💥 BÙM! Bạn đã chạm chướng ngại vật...";
             break;
 
         }
@@ -501,66 +540,81 @@ function update() {
 // ============================================================
 
 function drawBackground() {
-
-    let grad =
-        ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            canvas.height
-        );
-
-    grad.addColorStop(0, "#1a0033");
-
-    grad.addColorStop(1, "#000000");
-
+    // Bầu trời đêm chuyển sắc xanh tím
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#05091f");
+    grad.addColorStop(0.52, "#111c59");
+    grad.addColorStop(1, "#32145b");
     ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+    // Sao nhấp nháy và vệt sáng
+    for (let i = 0; i < 70; i++) {
+        const x = (i * 137 - distance * (0.08 + (i % 3) * 0.025) + 2000) % canvas.width;
+        const y = (i * 47 + 19) % 245;
+        const r = (i % 4 === 0) ? 2 : 1;
+        ctx.globalAlpha = 0.35 + 0.45 * Math.abs(Math.sin(performance.now() / 700 + i));
+        ctx.fillStyle = i % 5 === 0 ? "#00e5ff" : "#ffffff";
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 
+    // Mặt trăng neon
+    const moonGlow = ctx.createRadialGradient(650, 95, 8, 650, 95, 70);
+    moonGlow.addColorStop(0, "rgba(175,205,255,0.95)");
+    moonGlow.addColorStop(0.58, "rgba(103,124,255,0.75)");
+    moonGlow.addColorStop(1, "rgba(80,70,255,0)");
+    ctx.fillStyle = moonGlow;
+    ctx.beginPath(); ctx.arc(650, 95, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#c9d8ff";
+    ctx.beginPath(); ctx.arc(650, 95, 36, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(112,135,220,0.35)";
+    ctx.beginPath(); ctx.arc(638, 84, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(663, 105, 11, 0, Math.PI * 2); ctx.fill();
 
-    const colors = [
-        "#ff0055",
-        "#00f0ff",
-        "#ffcc00",
-        "#00ff66",
-        "#cc00ff"
-    ];
+    // Núi xa nhiều lớp tạo chiều sâu
+    function mountainLayer(baseY, amp, step, color, parallax) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        for (let x = -step; x <= canvas.width + step; x += step) {
+            const xx = x - (distance * parallax) % step;
+            const peakY = baseY - amp * (0.35 + 0.65 * Math.abs(Math.sin((x + 70) * 0.027)));
+            ctx.lineTo(xx, peakY);
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.closePath(); ctx.fill();
+    }
+    mountainLayer(300, 105, 58, "#171c58", 0.12);
+    mountainLayer(330, 78, 42, "#10143e", 0.22);
 
-
-    for (let i = 0; i < 16; i++) {
-
-        let x =
-            i * 55 -
-            (distance * 0.2) % 55;
-
-
-        ctx.fillStyle =
-            colors[i % colors.length];
-
-        ctx.shadowColor =
-            colors[i % colors.length];
-
-        ctx.shadowBlur = 10;
-
-
-        ctx.fillRect(
-            x,
-            0,
-            8,
-            40 + (i % 3) * 25
-        );
-
+    // Thành phố tương lai ở đường chân trời
+    for (let i = 0; i < 24; i++) {
+        const w = 16 + (i % 4) * 7;
+        const h = 28 + ((i * 29) % 68);
+        const x = (i * 43 - distance * 0.32) % (canvas.width + 50);
+        const bx = x < -w ? x + canvas.width + 50 : x;
+        ctx.fillStyle = i % 3 === 0 ? "#11183e" : "#0b1230";
+        ctx.fillRect(bx, floorY - h + 8, w, h);
+        ctx.fillStyle = i % 2 === 0 ? "#00e5ff" : "#ff3dba";
+        ctx.globalAlpha = 0.75;
+        for (let wy = floorY - h + 15; wy < floorY - 5; wy += 13) {
+            ctx.fillRect(bx + 4, wy, 3, 4);
+            if (w > 22) ctx.fillRect(bx + 12, wy, 3, 4);
+        }
+        ctx.globalAlpha = 1;
     }
 
-
-    ctx.shadowBlur = 0;
-
+    // Lưới neon ở mặt đất
+    ctx.strokeStyle = "rgba(0,229,255,0.16)";
+    ctx.lineWidth = 1;
+    for (let x = -80; x < canvas.width + 80; x += 40) {
+        const xx = x - (distance * 0.7) % 40;
+        ctx.beginPath(); ctx.moveTo(xx, floorY); ctx.lineTo(canvas.width / 2 + (xx - canvas.width / 2) * 1.8, canvas.height); ctx.stroke();
+    }
+    for (let y = floorY + 18; y < canvas.height; y += 18) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
 }
 
 
@@ -585,11 +639,11 @@ function draw() {
     // FLOOR
     // ========================================================
 
-    ctx.fillStyle = "#00f0ff";
+    ctx.fillStyle = "#e5fbff";
 
-    ctx.shadowColor = "#00f0ff";
+    ctx.shadowColor = "#00e5ff";
 
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 18;
 
     ctx.fillRect(
         0,
@@ -600,7 +654,10 @@ function draw() {
 
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = "#0d001a";
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, canvas.height);
+    floorGrad.addColorStop(0, "#10163d");
+    floorGrad.addColorStop(1, "#050817");
+    ctx.fillStyle = floorGrad;
 
     ctx.fillRect(
         0,
@@ -709,11 +766,11 @@ function draw() {
 
             if (obs.type === "spike") {
 
-                ctx.fillStyle = "#ff0055";
+                ctx.fillStyle = "#ff245f";
 
-                ctx.shadowColor = "#ff0055";
+                ctx.shadowColor = "#ff1744";
 
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 16;
 
                 ctx.beginPath();
 
@@ -788,9 +845,30 @@ function draw() {
 
 
     // ========================================================
+    // HIT EFFECT: MẢNH VỠ NEON BAY RA KHI CHẠM GAI
+    // ========================================================
+    if (gameState === "DYING") {
+        ctx.save();
+        for (const p of particles) {
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 14;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+    }
+
+    // ========================================================
     // PLAYER
     // ========================================================
 
+    if (gameState !== "DYING" && gameState !== "GAMEOVER") {
     ctx.save();
 
     ctx.translate(
@@ -845,7 +923,7 @@ function draw() {
 
 
     ctx.restore();
-
+    }
 
     // ========================================================
     // START SCREEN
