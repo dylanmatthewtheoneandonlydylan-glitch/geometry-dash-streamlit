@@ -311,28 +311,37 @@ const normalObstacles = levelObstacles.concat([
 ]);
 
 const hardObstacles = [
+    // Khúc đầu: gai đơn, gai đôi và khối chắn, chừa khoảng nhảy rõ ràng.
     { x: 600, type: "spike" },
     { x: 900, type: "spike" }, { x: 935, type: "spike" },
-    { x: 1250, type: "block" },
-    { x: 1580, type: "pillar", width: 76, height: 105 },
-    { x: 1850, type: "spike" }, { x: 1885, type: "spike" },
-    { x: 2200, type: "block" },
-    { x: 2520, type: "spike" }, { x: 2555, type: "spike" },
-    { x: 2860, type: "pillar", width: 76, height: 105 },
-    { x: 3130, type: "spike" }, { x: 3165, type: "spike" },
-    { x: 3500, type: "block" },
-    { x: 3820, type: "spike" }, { x: 3855, type: "spike" },
-    { x: 4160, type: "pillar", width: 76, height: 105 },
-    { x: 4430, type: "spike" }, { x: 4465, type: "spike" },
-    { x: 4800, type: "block" },
-    { x: 5120, type: "spike" }, { x: 5155, type: "spike" },
-    { x: 5480, type: "pillar", width: 76, height: 105 },
-    { x: 5750, type: "spike" }, { x: 5785, type: "spike" },
-    { x: 6120, type: "block" },
-    { x: 6440, type: "spike" }, { x: 6475, type: "spike" },
-    { x: 6800, type: "pillar", width: 76, height: 105 },
-    { x: 7070, type: "spike" }, { x: 7105, type: "spike" },
-    { x: 7440, type: "block" }
+    { x: 1250, type: "block", width: 42, height: 42 },
+
+    // Đoạn parkour 3 bậc: độ cao tăng dần, khoảng cách vừa đủ để nhảy từ bậc này sang bậc kế.
+    { x: 1580, type: "pillar", width: 92, height: 48 },
+    { x: 1780, type: "pillar", width: 92, height: 82 },
+    { x: 1980, type: "pillar", width: 100, height: 116 },
+
+    // Rời bậc cao rồi nhảy qua thanh ngang thấp trên mặt đường.
+    { x: 2310, type: "bar", width: 112, height: 38 },
+    { x: 2650, type: "spike" }, { x: 2685, type: "spike" },
+    { x: 3010, type: "block", width: 44, height: 44 },
+
+    // Bậc đôi tiếp theo, có khoảng trống để đáp xuống trước cụm gai.
+    { x: 3350, type: "pillar", width: 92, height: 58 },
+    { x: 3560, type: "pillar", width: 100, height: 98 },
+    { x: 3890, type: "spike" }, { x: 3925, type: "spike" },
+    { x: 4260, type: "bar", width: 118, height: 42 },
+    { x: 4610, type: "block", width: 44, height: 44 },
+    { x: 4950, type: "spike" }, { x: 4985, type: "spike" },
+
+    // Đoạn cuối khó hơn: nhảy lên cột, xuống đất, rồi vượt chuỗi gai có khoảng cách an toàn.
+    { x: 5320, type: "pillar", width: 96, height: 72 },
+    { x: 5535, type: "pillar", width: 100, height: 108 },
+    { x: 5870, type: "bar", width: 120, height: 40 },
+    { x: 6210, type: "spike" }, { x: 6245, type: "spike" },
+    { x: 6580, type: "block", width: 44, height: 44 },
+    { x: 6920, type: "spike" }, { x: 6955, type: "spike" },
+    { x: 7290, type: "bar", width: 118, height: 38 }
 ];
 
 
@@ -1334,35 +1343,24 @@ function draw() {
             }
 
 
-            // BLOCK / PILLAR
-
+            // BLOCK / PILLAR / THANH NGANG
             else {
-
-                ctx.fillStyle = obs.type === "pillar" ? "#00d9ff" : "#ff9900";
-                ctx.shadowColor = obs.type === "pillar" ? "#00d9ff" : "#ff9900";
-
-                ctx.shadowBlur = 10;
-
-                ctx.fillRect(
-                    currentX,
-                    floorY - obs.height,
-                    obs.width,
-                    obs.height
-                );
-
+                const isPillar = obs.type === "pillar";
+                const isBar = obs.type === "bar";
+                const obstacleY = floorY - obs.height;
+                ctx.fillStyle = isPillar ? "#00d9ff" : (isBar ? "#ff3bd4" : "#ff9900");
+                ctx.shadowColor = isPillar ? "#00d9ff" : (isBar ? "#ff3bd4" : "#ff9900");
+                ctx.shadowBlur = isBar ? 14 : 10;
+                ctx.fillRect(currentX, obstacleY, obs.width, obs.height);
+                if (isBar) {
+                    // Hai đầu thanh nhô nhẹ giúp người chơi nhận ra đây là chướng ngại ngang.
+                    ctx.fillRect(currentX - 5, obstacleY - 4, 8, obs.height + 8);
+                    ctx.fillRect(currentX + obs.width - 3, obstacleY - 4, 8, obs.height + 8);
+                }
                 ctx.strokeStyle = "#ffffff";
-
                 ctx.lineWidth = 2;
-
-                ctx.strokeRect(
-                    currentX,
-                    floorY - obs.height,
-                    obs.width,
-                    obs.height
-                );
-
+                ctx.strokeRect(currentX, obstacleY, obs.width, obs.height);
                 ctx.shadowBlur = 0;
-
             }
 
         }
