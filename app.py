@@ -678,41 +678,25 @@ function update() {
 // ============================================================
 
 function drawBackground() {
-    // Bầu trời đêm chuyển sắc xanh tím
+    // Nền xanh đen kiểu Geometry Dash — không còn phủ nền tím.
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#05091f");
-    grad.addColorStop(0.52, "#111c59");
-    grad.addColorStop(1, "#32145b");
+    grad.addColorStop(0, "#020719");
+    grad.addColorStop(0.55, "#07143b");
+    grad.addColorStop(1, "#020617");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Sao nhấp nháy và vệt sáng
-    for (let i = 0; i < 70; i++) {
-        const x = (i * 137 - distance * (0.08 + (i % 3) * 0.025) + 2000) % canvas.width;
-        const y = (i * 47 + 19) % 245;
-        const r = (i % 4 === 0) ? 2 : 1;
-        ctx.globalAlpha = 0.35 + 0.45 * Math.abs(Math.sin(performance.now() / 700 + i));
-        ctx.fillStyle = i % 5 === 0 ? "#00e5ff" : "#ffffff";
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    // Sao nhỏ nhấp nháy.
+    for (let i = 0; i < 78; i++) {
+        const x = ((i * 137 - distance * (0.08 + (i % 3) * 0.025) + 4000) % canvas.width + canvas.width) % canvas.width;
+        const y = (i * 47 + 19) % 285;
+        ctx.globalAlpha = 0.28 + 0.65 * Math.abs(Math.sin(performance.now() / 650 + i));
+        ctx.fillStyle = i % 6 === 0 ? "#00eaff" : "#ffffff";
+        ctx.fillRect(x, y, i % 4 === 0 ? 3 : 2, i % 4 === 0 ? 3 : 2);
     }
     ctx.globalAlpha = 1;
 
-    // Mặt trăng neon
-    const moonX = canvas.width * 0.78;
-    const moonY = 120;
-    const moonGlow = ctx.createRadialGradient(moonX, moonY, 8, moonX, moonY, 92);
-    moonGlow.addColorStop(0, "rgba(175,205,255,0.95)");
-    moonGlow.addColorStop(0.58, "rgba(103,124,255,0.75)");
-    moonGlow.addColorStop(1, "rgba(80,70,255,0)");
-    ctx.fillStyle = moonGlow;
-    ctx.beginPath(); ctx.arc(moonX, moonY, 92, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#c9d8ff";
-    ctx.beginPath(); ctx.arc(moonX, moonY, 49, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(112,135,220,0.35)";
-    ctx.beginPath(); ctx.arc(moonX - 16, moonY - 13, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(moonX + 17, moonY + 13, 15, 0, Math.PI * 2); ctx.fill();
-
-    // Núi xa nhiều lớp tạo chiều sâu
+    // Hai lớp núi hình học xanh đậm.
     function mountainLayer(baseY, amp, step, color, parallax) {
         ctx.fillStyle = color;
         ctx.beginPath();
@@ -723,40 +707,29 @@ function drawBackground() {
             ctx.lineTo(xx, peakY);
         }
         ctx.lineTo(canvas.width, canvas.height);
-        ctx.closePath(); ctx.fill();
+        ctx.closePath();
+        ctx.fill();
     }
-    mountainLayer(300, 105, 58, "#171c58", 0.12);
-    mountainLayer(330, 78, 42, "#10143e", 0.22);
+    mountainLayer(365, 85, 65, "#0b1b50", 0.12);
+    mountainLayer(400, 62, 45, "#07102f", 0.22);
 
-    // Thành phố tương lai ở đường chân trời
-    for (let i = 0; i < 24; i++) {
-        const w = 16 + (i % 4) * 7;
-        const h = 28 + ((i * 29) % 68);
-        const x = (i * 43 - distance * 0.32) % (canvas.width + 50);
-        const bx = x < -w ? x + canvas.width + 50 : x;
-        ctx.fillStyle = i % 3 === 0 ? "#11183e" : "#0b1230";
-        ctx.fillRect(bx, floorY - h + 8, w, h);
-        ctx.fillStyle = i % 2 === 0 ? "#00e5ff" : "#ff3dba";
-        ctx.globalAlpha = 0.75;
-        for (let wy = floorY - h + 15; wy < floorY - 5; wy += 13) {
-            ctx.fillRect(bx + 4, wy, 3, 4);
-            if (w > 22) ctx.fillRect(bx + 12, wy, 3, 4);
+    // Thành phố neon sát đường chân trời.
+    for (let i = 0; i < 28; i++) {
+        const w = 15 + (i % 4) * 6;
+        const h = 25 + ((i * 29) % 65);
+        let x = ((i * 43 - distance * 0.32 + 5000) % (canvas.width + 50));
+        if (x > canvas.width) x -= canvas.width + 50;
+        ctx.fillStyle = "#050b25";
+        ctx.fillRect(x, floorY - h, w, h);
+        ctx.fillStyle = i % 2 === 0 ? "#00eaff" : "#ff35ce";
+        ctx.globalAlpha = 0.8;
+        for (let wy = floorY - h + 8; wy < floorY - 5; wy += 13) {
+            ctx.fillRect(x + 4, wy, 3, 4);
+            if (w > 22) ctx.fillRect(x + 12, wy, 3, 4);
         }
         ctx.globalAlpha = 1;
     }
-
-    // Lưới neon ở mặt đất
-    ctx.strokeStyle = "rgba(0,229,255,0.16)";
-    ctx.lineWidth = 1;
-    for (let x = -80; x < canvas.width + 80; x += 40) {
-        const xx = x - (distance * 0.7) % 40;
-        ctx.beginPath(); ctx.moveTo(xx, floorY); ctx.lineTo(canvas.width / 2 + (xx - canvas.width / 2) * 1.8, canvas.height); ctx.stroke();
-    }
-    for (let y = floorY + 18; y < canvas.height; y += 18) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
 }
-
 
 // ============================================================
 // DRAW
@@ -842,48 +815,75 @@ function draw() {
 
 
     // ========================================================
-    // FINISH WALL: bức tường lớn phát sáng
+    // FINISH PORTAL — cổng cyan giống ảnh tham khảo
     // ========================================================
     const finishX = (gameState === "WINNING" || gameState === "VICTORY")
         ? canvas.width * 0.62
         : LEVEL_LENGTH - distance + player.x + 105;
-    if (finishX > -100 && finishX < canvas.width + 100) {
-        const pulse = 0.78 + 0.22 * Math.sin(performance.now() / 90);
-        const wallW = 28;
-        const wallGrad = ctx.createLinearGradient(finishX - wallW, 0, finishX + wallW, 0);
-        wallGrad.addColorStop(0, "rgba(255,40,190,0.08)");
-        wallGrad.addColorStop(0.28, "rgba(255,60,210,0.7)");
-        wallGrad.addColorStop(0.5, "rgba(255,255,255,0.98)");
-        wallGrad.addColorStop(0.72, "rgba(255,60,210,0.75)");
-        wallGrad.addColorStop(1, "rgba(255,40,190,0.08)");
+    if (finishX > -150 && finishX < canvas.width + 150) {
+        const gateW = 100;
+        const gateH = 205;
+        const gateTop = floorY - gateH;
+        const pulse = 0.82 + 0.18 * Math.sin(performance.now() / 105);
         ctx.save();
         ctx.globalAlpha = pulse;
-        ctx.fillStyle = wallGrad;
-        ctx.shadowColor = "#ff42d6";
-        ctx.shadowBlur = 35;
-        ctx.fillRect(finishX - wallW / 2, 0, wallW, floorY + 4);
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3;
+
+        // Vầng sáng lớn phía sau cổng.
+        const halo = ctx.createRadialGradient(finishX, gateTop + gateH * 0.52, 8, finishX, gateTop + gateH * 0.52, 180);
+        halo.addColorStop(0, "rgba(0,255,255,0.45)");
+        halo.addColorStop(0.45, "rgba(0,170,255,0.20)");
+        halo.addColorStop(1, "rgba(0,120,255,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(finishX - 185, gateTop - 45, 370, gateH + 90);
+
+        // Lõi cổng xanh lam trong suốt.
+        const portalGrad = ctx.createLinearGradient(finishX - gateW / 2, 0, finishX + gateW / 2, 0);
+        portalGrad.addColorStop(0, "rgba(0,245,255,0.16)");
+        portalGrad.addColorStop(0.5, "rgba(45,130,255,0.55)");
+        portalGrad.addColorStop(1, "rgba(0,245,255,0.16)");
+        ctx.fillStyle = portalGrad;
         ctx.beginPath();
-        ctx.moveTo(finishX, 0);
-        ctx.lineTo(finishX, floorY + 4);
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 42);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 42);
+        ctx.lineTo(finishX + gateW / 2, floorY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Viền cyan phát sáng.
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 10;
+        ctx.shadowColor = "#00eaff";
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 42);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 42);
+        ctx.lineTo(finishX + gateW / 2, floorY);
         ctx.stroke();
-        // Các ô vuông nhỏ chạy dọc bức tường
-        for (let y = 18; y < floorY - 5; y += 27) {
-            ctx.fillStyle = (Math.floor(y / 27) % 2 === 0) ? "#fff176" : "#ffffff";
-            ctx.shadowColor = "#fff176";
-            ctx.shadowBlur = 10;
-            ctx.fillRect(finishX - 3, y, 6, 6);
-        }
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#ffffff";
+
+        // Oval năng lượng ở giữa cổng.
+        ctx.strokeStyle = "#d8ffff";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#ffffff";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.ellipse(finishX, gateTop + gateH * 0.55, 25 + 3 * pulse, 64 + 3 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#dfffff";
         ctx.font = "bold 22px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("FINISH", finishX, 36);
+        ctx.shadowColor = "#00eaff";
+        ctx.shadowBlur = 15;
+        ctx.fillText("FINISH", finishX, gateTop - 18);
+        ctx.shadowBlur = 0;
         ctx.restore();
     }
-
 
     // ========================================================
     // OBSTACLES
@@ -1225,20 +1225,55 @@ function draw() {
     if (gameState === "VICTORY") {
         const t = performance.now() - winStarted;
 
-        // Nền hồng tím kiểu Geometry Dash
+        // Nền xanh đen kiểu Geometry Dash, không còn nền hồng tím.
         const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bg.addColorStop(0, "#8d075f");
-        bg.addColorStop(0.48, "#d80b9c");
-        bg.addColorStop(1, "#ff20b4");
+        bg.addColorStop(0, "#020719");
+        bg.addColorStop(0.55, "#07143b");
+        bg.addColorStop(1, "#020617");
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Cổng cyan ở trung tâm hiệu ứng chiến thắng.
+        const gx = canvas.width * 0.62;
+        const gateTop = floorY - 205;
+        const pulse = 0.8 + 0.2 * Math.sin(t / 100);
+        const portalGlow = ctx.createRadialGradient(gx, gateTop + 105, 5, gx, gateTop + 105, 190);
+        portalGlow.addColorStop(0, "rgba(100,255,255,0.75)");
+        portalGlow.addColorStop(0.38, "rgba(0,200,255,0.28)");
+        portalGlow.addColorStop(1, "rgba(0,100,255,0)");
+        ctx.fillStyle = portalGlow;
+        ctx.fillRect(gx - 195, gateTop - 25, 390, 255);
+
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = "rgba(0,150,255,0.32)";
+        ctx.beginPath();
+        ctx.moveTo(gx - 50, floorY);
+        ctx.lineTo(gx - 50, gateTop + 42);
+        ctx.quadraticCurveTo(gx - 50, gateTop, gx, gateTop);
+        ctx.quadraticCurveTo(gx + 50, gateTop, gx + 50, gateTop + 42);
+        ctx.lineTo(gx + 50, floorY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 10;
+        ctx.shadowColor = "#00eaff";
+        ctx.shadowBlur = 35;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#e5ffff";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(gx, gateTop + 112, 26, 64, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
         // Vệt sáng dọc và ánh lóe ngay thời điểm khối vuông chạm tường
         const flashAlpha = Math.max(0, 0.55 - t / 900);
         const flash = ctx.createRadialGradient(canvas.width * 0.62, canvas.height * 0.48, 5, canvas.width * 0.62, canvas.height * 0.48, canvas.width * 0.72);
-        flash.addColorStop(0, `rgba(255,255,230,${flashAlpha})`);
-        flash.addColorStop(0.28, `rgba(255,120,225,${flashAlpha * 0.62})`);
-        flash.addColorStop(1, "rgba(255,80,210,0)");
+        flash.addColorStop(0, `rgba(235,255,255,${flashAlpha})`);
+        flash.addColorStop(0.28, `rgba(0,220,255,${flashAlpha * 0.62})`);
+        flash.addColorStop(1, "rgba(0,120,255,0)");
         ctx.fillStyle = flash;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1257,7 +1292,7 @@ function draw() {
             ctx.lineTo(burstX + Math.cos(a - spread) * reach, burstY + Math.sin(a - spread) * reach);
             ctx.lineTo(burstX + Math.cos(a + spread) * reach, burstY + Math.sin(a + spread) * reach);
             ctx.closePath();
-            ctx.fillStyle = i % 3 === 0 ? "#fff6a8" : (i % 3 === 1 ? "#ffffff" : "#ff9fe9");
+            ctx.fillStyle = i % 3 === 0 ? "#fff176" : (i % 3 === 1 ? "#ffffff" : "#43e8ff");
             ctx.shadowColor = ctx.fillStyle;
             ctx.shadowBlur = 16;
             ctx.fill();
@@ -1267,7 +1302,7 @@ function draw() {
         // Các khối hình học mờ phía sau
         ctx.save();
         ctx.globalAlpha = 0.18;
-        ctx.strokeStyle = "#ff82e5";
+        ctx.strokeStyle = "#168dff";
         ctx.lineWidth = 10;
         for (let i = 0; i < 7; i++) {
             const x = ((i * 205 - t * 0.035) % (canvas.width + 230) + canvas.width + 230) % (canvas.width + 230) - 115;
@@ -1279,7 +1314,7 @@ function draw() {
         const glowX = canvas.width * 0.88;
         const glow = ctx.createLinearGradient(glowX - 45, 0, glowX + 40, 0);
         glow.addColorStop(0, "rgba(255,255,255,0)");
-        glow.addColorStop(0.55, "rgba(255,255,220,0.9)");
+        glow.addColorStop(0.55, "rgba(180,255,255,0.9)");
         glow.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = glow;
         ctx.fillRect(glowX - 45, 0, 85, canvas.height);
