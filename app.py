@@ -737,7 +737,7 @@ function update() {
         }
         particles = particles.filter(p => p.life > 0);
         screenShake *= 0.82;
-        if (elapsed > 700) gameState = "GAMEOVER";
+        if (elapsed > 180) gameState = "GAMEOVER";
         return;
     }
 
@@ -1302,8 +1302,6 @@ function drawGameOverScreen() {
     ctx.font = "bold 21px Arial";
     ctx.fillText("ĐỂ CHƠI TIẾP", 875, 480);
     ctx.shadowBlur = 0; ctx.textBaseline = "alphabetic";
-    ctx.font = "16px Arial"; ctx.fillStyle = "#d7cfff";
-    ctx.fillText("100 ĐÔ ẢO • KHÔNG DÙNG TIỀN THẬT", canvas.width / 2, 550);
     ctx.restore();
 }
 
@@ -1737,97 +1735,6 @@ function draw() {
     }
 
 
-    // ========================================================
-    // 💀 GAME OVER + TROLL FACE
-    // ========================================================
-
-    if (gameState === "GAMEOVER") {
-
-        // Lớp phủ
-
-        ctx.fillStyle =
-            "rgba(0,0,0,0.75)";
-
-        ctx.fillRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-
-        // GAME OVER
-
-        ctx.fillStyle = "#ff0055";
-
-        ctx.font =
-            "bold 54px Arial";
-
-        ctx.textAlign = "center";
-
-        ctx.shadowColor = "#ff0055";
-
-        ctx.shadowBlur = 15;
-
-        ctx.fillText(
-            "GAME OVER",
-            canvas.width / 2,
-            90
-        );
-
-        ctx.shadowBlur = 0;
-
-
-        // ====================================================
-        // 😈 TROLL FACE
-        // ====================================================
-
-        if (trollImg.complete) {
-
-            let trollSize = 220;
-
-            ctx.drawImage(
-                trollImg,
-
-                canvas.width / 2 -
-                trollSize / 2,
-
-                canvas.height * 0.25,
-
-                trollSize,
-
-                trollSize
-            );
-
-        }
-
-
-        // Chữ
-
-        ctx.fillStyle = "#ffffff";
-
-        ctx.font =
-            "bold 18px Arial";
-
-        ctx.fillText(
-            "💀 Bạn đã chết!",
-            canvas.width / 2,
-            canvas.height * 0.78
-        );
-
-
-        ctx.font = "16px Arial";
-
-        ctx.fillText(
-            "Nhấn SPACE hoặc Click để chơi lại",
-            canvas.width / 2,
-            canvas.height * 0.86
-        );
-
-    }
-
-
-    // ========================================================
     // ========================================================
     // VICTORY — thiết kế theo ảnh mẫu xanh đen / neon cyan
     // ========================================================
