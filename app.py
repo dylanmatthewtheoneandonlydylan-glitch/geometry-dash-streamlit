@@ -21,6 +21,9 @@ with open("pop_star.mp3", "rb") as f:
 with open("vine-boom.mp3", "rb") as f:
     death_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
 
+with open("final-fantasy-vii-victory-fanfare-1.mp3", "rb") as f:
+    victory_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
+
 with open("trollface.png", "rb") as f:
     troll_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
@@ -98,6 +101,12 @@ canvas {
     preload="auto">
 </audio>
 
+<audio
+    id="victorySound"
+    src="VICTORY_SOUND_HERE"
+    preload="auto">
+</audio>
+
 
 <script>
 
@@ -116,9 +125,11 @@ const info = document.getElementById("info");
 
 const bgMusic = document.getElementById("bgMusic");
 const deathSound = document.getElementById("deathSound");
+const victorySound = document.getElementById("victorySound");
 
 bgMusic.volume = 0.5;
 deathSound.volume = 0.8;
+victorySound.volume = 0.9;
 
 
 // ============================================================
@@ -333,6 +344,24 @@ function playDeathSound() {
 
 
 // ============================================================
+// VICTORY FANFARE
+// ============================================================
+
+function playVictorySound() {
+    victorySound.pause();
+    victorySound.currentTime = 0;
+    victorySound.play().catch(function(error) {
+        console.log("Victory sound blocked:", error);
+    });
+}
+
+function stopVictorySound() {
+    victorySound.pause();
+    victorySound.currentTime = 0;
+}
+
+
+// ============================================================
 // START / JUMP
 // ============================================================
 
@@ -404,6 +433,8 @@ canvas.addEventListener("mousedown", function() {
 // ============================================================
 
 function resetGame() {
+
+    stopVictorySound();
 
     player.x = 180;
     victoryPlayerX = player.x;
@@ -490,6 +521,7 @@ function update() {
             gameState = "VICTORY";
             winStarted = performance.now();
             stopMusic();
+            playVictorySound();
             info.innerText = "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
         }
         return;
@@ -1425,6 +1457,11 @@ game_html = game_html.replace(
 game_html = game_html.replace(
     "DEATH_SOUND_HERE",
     death_url
+)
+
+game_html = game_html.replace(
+    "VICTORY_SOUND_HERE",
+    victory_url
 )
 
 game_html = game_html.replace(
