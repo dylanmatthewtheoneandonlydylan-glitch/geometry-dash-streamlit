@@ -154,6 +154,8 @@ let winParticles = [];
 let victoryTrail = [];
 let victoryBurst = [];
 let victoryPlayerY = 0;
+let victoryPlayerX = 0;
+let winningStarted = 0;
 let winStarted = 0;
 let screenShake = 0;
 
@@ -187,6 +189,7 @@ function startVictoryEffect() {
     victoryTrail = [];
     victoryBurst = [];
     victoryPlayerY = player.y;
+    victoryPlayerX = player.x;
     const colors = ["#fff176", "#ffe95b", "#ffffff", "#ffef9a"];
 
     // Các ô vuông vàng bắn tung tóe quanh nhân vật giống Geometry Dash
@@ -409,6 +412,8 @@ canvas.addEventListener("mousedown", function() {
 
 function resetGame() {
 
+    player.x = 180;
+    victoryPlayerX = player.x;
     player.y = floorY - player.size;
 
     player.vy = 0;
@@ -449,6 +454,45 @@ function resetGame() {
 // ============================================================
 
 function update() {
+
+    // Giai đoạn kết thúc: khối vuông xoay rồi lao vào bức tường FINISH
+    if (gameState === "WINNING") {
+        const elapsed = performance.now() - winningStarted;
+        const duration = 1150;
+        const progress = Math.min(1, elapsed / duration);
+        player.rotation += 0.28;
+        victoryPlayerX = 180 + progress * 330;
+        player.x = victoryPlayerX;
+        player.y = victoryPlayerY - Math.sin(progress * Math.PI) * 42;
+
+        if (Math.random() < 0.95) {
+            const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
+            victoryTrail.push({
+                x: victoryPlayerX + player.size * 0.25,
+                y: player.y + player.size * (0.3 + Math.random() * 0.4),
+                size: 6 + Math.random() * 9,
+                life: 1,
+                color: rainbow[Math.floor(Math.random() * rainbow.length)]
+            });
+        }
+        victoryTrail.forEach(p => { p.x -= 2.8; p.life -= 0.025; p.size *= 0.99; });
+        victoryTrail = victoryTrail.filter(p => p.life > 0);
+        for (const p of victoryBurst) {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.vx *= 0.992;
+            p.life -= 0.018; p.rotation += p.spin;
+        }
+        victoryBurst = victoryBurst.filter(p => p.life > 0);
+
+        if (progress >= 1) {
+            // Khối vuông biến mất khi chạm tường; sau đó hiện màn chiến thắng
+            player.x = -1000;
+            gameState = "VICTORY";
+            winStarted = performance.now();
+            stopMusic();
+            info.innerText = "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
+        }
+        return;
+    }
 
     if (gameState === "VICTORY") {
         const t = performance.now() - winStarted;
@@ -610,15 +654,11 @@ function update() {
     // ========================================================
 
     if (distance >= LEVEL_LENGTH) {
-
-        gameState = "VICTORY";
+        gameState = "WINNING";
+        winningStarted = performance.now();
         startVictoryEffect();
-
-        stopMusic();
-
-        info.innerText =
-            "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
-
+        victoryPlayerX = player.x;
+        info.innerText = "✨ ĐANG LAO VÀO TƯỜNG FINISH!";
     }
     else if (gameState === "PLAYING") {
 
@@ -801,48 +841,45 @@ function draw() {
 
 
     // ========================================================
-    // FINISH
+    // FINISH WALL: bức tường lớn phát sáng
     // ========================================================
-
-    // CỔNG KẾT THÚC kiểu Geometry Dash: khung neon + lõi năng lượng
-    const finishX = LEVEL_LENGTH - distance + player.x;
-    if (finishX > -140 && finishX < canvas.width + 180) {
-        const gateW = 82;
-        const gateH = 190;
-        const gateTop = floorY - gateH;
-        const pulse = 0.72 + 0.28 * Math.sin(performance.now() / 130);
-
+    const finishX = (gameState === "WINNING" || gameState === "VICTORY")
+        ? player.x + 105
+        : LEVEL_LENGTH - distance + player.x + 105;
+    if (finishX > -100 && finishX < canvas.width + 100) {
+        const pulse = 0.78 + 0.22 * Math.sin(performance.now() / 90);
+        const wallW = 28;
+        const wallGrad = ctx.createLinearGradient(finishX - wallW, 0, finishX + wallW, 0);
+        wallGrad.addColorStop(0, "rgba(255,40,190,0.08)");
+        wallGrad.addColorStop(0.28, "rgba(255,60,210,0.7)");
+        wallGrad.addColorStop(0.5, "rgba(255,255,255,0.98)");
+        wallGrad.addColorStop(0.72, "rgba(255,60,210,0.75)");
+        wallGrad.addColorStop(1, "rgba(255,40,190,0.08)");
         ctx.save();
         ctx.globalAlpha = pulse;
-        ctx.shadowColor = "#00f5ff";
-        ctx.shadowBlur = 30;
-        ctx.strokeStyle = "#00f5ff";
-        ctx.lineWidth = 9;
-        ctx.beginPath();
-        ctx.moveTo(finishX - gateW / 2, floorY);
-        ctx.lineTo(finishX - gateW / 2, gateTop + 34);
-        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
-        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 34);
-        ctx.lineTo(finishX + gateW / 2, floorY);
-        ctx.stroke();
-
-        const portalGrad = ctx.createLinearGradient(finishX - gateW / 2, 0, finishX + gateW / 2, 0);
-        portalGrad.addColorStop(0, "rgba(0,245,255,0.05)");
-        portalGrad.addColorStop(0.5, "rgba(120,70,255,0.55)");
-        portalGrad.addColorStop(1, "rgba(255,65,210,0.08)");
-        ctx.fillStyle = portalGrad;
-        ctx.fillRect(finishX - gateW / 2 + 5, gateTop + 8, gateW - 10, gateH - 8);
-
+        ctx.fillStyle = wallGrad;
+        ctx.shadowColor = "#ff42d6";
+        ctx.shadowBlur = 35;
+        ctx.fillRect(finishX - wallW / 2, 0, wallW, floorY + 4);
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(finishX, gateTop + gateH * 0.48, 22 + 4 * pulse, 53 + 4 * pulse, 0, 0, Math.PI * 2);
+        ctx.moveTo(finishX, 0);
+        ctx.lineTo(finishX, floorY + 4);
         ctx.stroke();
+        // Các ô vuông nhỏ chạy dọc bức tường
+        for (let y = 18; y < floorY - 5; y += 27) {
+            ctx.fillStyle = (Math.floor(y / 27) % 2 === 0) ? "#fff176" : "#ffffff";
+            ctx.shadowColor = "#fff176";
+            ctx.shadowBlur = 10;
+            ctx.fillRect(finishX - 3, y, 6, 6);
+        }
         ctx.shadowBlur = 0;
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 20px Arial";
+        ctx.font = "bold 22px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("FINISH", finishX, gateTop - 18);
+        ctx.fillText("FINISH", finishX, 36);
         ctx.restore();
     }
 
@@ -971,7 +1008,7 @@ function draw() {
     // PLAYER
     // ========================================================
 
-    if (gameState !== "DYING" && gameState !== "GAMEOVER") {
+    if (gameState !== "DYING" && gameState !== "GAMEOVER" && gameState !== "VICTORY") {
     ctx.save();
 
     ctx.translate(
@@ -1254,21 +1291,6 @@ function draw() {
         }
         ctx.restore();
         ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-
-        // Vẽ lại skin của người chơi đang bay và xoay
-        ctx.save();
-        ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
-        ctx.rotate(player.rotation);
-        ctx.shadowColor = "#baff43";
-        ctx.shadowBlur = 20;
-        if (playerImg.complete && playerImg.naturalWidth > 0) {
-            ctx.drawImage(playerImg, -player.size / 2, -player.size / 2, player.size, player.size);
-        } else {
-            ctx.fillStyle = "#9cff35";
-            ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
-        }
-        ctx.restore();
         ctx.shadowBlur = 0;
 
         // Thông báo chiến thắng gọn ở phía dưới để không che hiệu ứng
