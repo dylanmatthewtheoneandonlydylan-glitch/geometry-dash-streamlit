@@ -1380,8 +1380,10 @@ function draw() {
             player.x;
 
 
+        // Giữ chướng ngại vật được vẽ cho đến khi toàn bộ khối đã ra khỏi màn hình.
+        // Trước đây chỉ kiểm tra mép trái currentX nên khối rộng bị biến mất quá sớm.
         if (
-            currentX > -50 &&
+            currentX + obs.width > -50 &&
             currentX < canvas.width + 50
         ) {
 
