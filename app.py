@@ -1,422 +1,1763 @@
-
 import streamlit as st
 import streamlit.components.v1 as components
 import base64
-from pathlib import Path
 
-st.set_page_config(page_title="Geometry Dash Custom Face", layout="wide")
+st.set_page_config(
+    page_title="Geometry Dash Custom Skin",
+    layout="wide"
+)
 
-ASSETS = {
-    "MUSIC_URL_HERE": ("pop_star.mp3", "audio/mpeg"),
-    "DEATH_SOUND_HERE": ("vine-boom.mp3", "audio/mpeg"),
-    "VICTORY_SOUND_HERE": ("final-fantasy-vii-victory-fanfare-1.mp3", "audio/mpeg"),
-    "PLAYER_IMAGE_HERE": ("player.png", "image/png"),
-    "TROLL_FACE_HERE": ("trollface.png", "image/png"),
-}
+st.title("🏃 Geometry Dash - Custom Face Edition")
+st.caption("Nhấn SPACE hoặc Click chuột để nhảy qua các chướng ngại vật!")
 
-st.markdown("""
-<style>
-.stApp {background:#03091f;color:white}
-header[data-testid="stHeader"] {background:#03091f}
-.block-container {padding-top:1rem;max-width:1500px}
-</style>
-""", unsafe_allow_html=True)
 
-st.title("GEOMETRY DASH — CUSTOM FACE EDITION")
-st.caption("Chọn cấp độ trong sảnh chờ, sau đó nhấn PLAY. Dùng SPACE, mũi tên lên hoặc click để nhảy.")
+# ============================================================
+# ĐỌC FILE ÂM THANH + TROLL FACE
+# ============================================================
 
-game_html = r"""
+with open("pop_star.mp3", "rb") as f:
+    music_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
+
+with open("vine-boom.mp3", "rb") as f:
+    death_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
+
+with open("final-fantasy-vii-victory-fanfare-1.mp3", "rb") as f:
+    victory_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
+
+with open("trollface.png", "rb") as f:
+    troll_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
+with open("player.png", "rb") as f:
+    player_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
+
+# ============================================================
+# GAME
+# ============================================================
+
+game_html = """
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
+
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#03091f;color:white;font-family:Arial,sans-serif;overflow:hidden}
-#wrap{width:100%;max-width:1400px;margin:auto}
-canvas{width:100%;height:auto;display:block;border:2px solid #00dfff;border-radius:8px;box-shadow:0 0 24px #00bfff55;touch-action:manipulation}
-#info{text-align:center;font-size:17px;font-weight:bold;padding:10px;color:#eafaff}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    background: #0d0f18;
+    font-family: Arial, sans-serif;
+    color: white;
+    user-select: none;
+    overflow-x: hidden;
+}
+body {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    flex-direction: column;
+    padding: 8px 0 12px;
+    box-sizing: border-box;
+}
+canvas {
+    display: block;
+    width: min(98vw, 1400px);
+    height: auto;
+    border: 3px solid #00f0ff;
+    box-shadow: 0 0 32px rgba(0,240,255,0.45);
+    border-radius: 10px;
+    background: #000;
+}
+#info {
+    margin-top: 10px;
+    font-size: clamp(16px, 1.8vw, 22px);
+    font-weight: bold;
+    text-align: center;
+}
+
 </style>
+
 </head>
+
 <body>
-<div id="wrap">
-<canvas id="game" width="1200" height="650"></canvas>
-<div id="info">Chọn cấp độ rồi nhấn PLAY</div>
+
+<canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+<div id="info">
+    Chọn EASY, NORMAL hoặc HARD để bắt đầu!
 </div>
-<audio id="music" src="MUSIC_URL_HERE" loop></audio>
-<audio id="death" src="DEATH_SOUND_HERE"></audio>
-<audio id="victory" src="VICTORY_SOUND_HERE"></audio>
+
+
+<audio
+    id="bgMusic"
+    src="MUSIC_URL_HERE"
+    loop
+    preload="auto">
+</audio>
+
+<audio
+    id="deathSound"
+    src="DEATH_SOUND_HERE"
+    preload="auto">
+</audio>
+
+<audio
+    id="victorySound"
+    src="VICTORY_SOUND_HERE"
+    preload="auto">
+</audio>
+
+
 <script>
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-const info=document.getElementById("info");
-const music=document.getElementById("music"),deathSound=document.getElementById("death"),victorySound=document.getElementById("victory");
-const playerImg=new Image();playerImg.src="PLAYER_IMAGE_HERE";
-const trollImg=new Image();trollImg.src="TROLL_FACE_HERE";
 
-const W=canvas.width,H=canvas.height,FLOOR=535;
-const difficulties={
- EASY:{speed:5.2,gap:360,jump:-14.2,gravity:.72,label:"EASY"},
- NORMAL:{speed:6.7,gap:300,jump:-14.7,gravity:.78,label:"NORMAL"},
- HARD:{speed:8.1,gap:255,jump:-15.1,gravity:.82,label:"HARD"}
+// ============================================================
+// CANVAS
+// ============================================================
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const info = document.getElementById("info");
+
+
+// ============================================================
+// AUDIO
+// ============================================================
+
+const bgMusic = document.getElementById("bgMusic");
+const deathSound = document.getElementById("deathSound");
+const victorySound = document.getElementById("victorySound");
+
+bgMusic.volume = 0.5;
+deathSound.volume = 0.8;
+victorySound.volume = 0.9;
+
+
+// ============================================================
+// PLAYER SKIN
+// ============================================================
+
+const playerImg = new Image();
+
+playerImg.src = "PLAYER_IMAGE_HERE";
+
+
+// ============================================================
+// TROLL FACE
+// ============================================================
+
+const trollImg = new Image();
+
+trollImg.src = "TROLL_FACE_HERE";
+
+
+// ============================================================
+// GAME STATE
+// ============================================================
+
+let gameState = "MENU";
+let selectedDifficulty = "NORMAL";
+let menuDistance = 0;
+let menuCube = { x: 80, y: 0, vy: 0, rotation: 0, grounded: true, nextJump: 0 };
+let menuObstacles = [];
+let menuLastObstacle = 0;
+
+let speed = 7;
+
+let distance = 0;
+let deathStarted = 0;
+let particles = [];
+let winParticles = [];
+let victoryTrail = [];
+let victoryBurst = [];
+let victoryPlayerY = 0;
+let victoryPlayerX = 0;
+let winningStarted = 0;
+let winStarted = 0;
+let screenShake = 0;
+let lastFrameTime = 0;
+let frameScale = 1;
+
+function startDeathEffect(cx, cy) {
+    gameState = "DYING";
+    deathStarted = performance.now();
+    screenShake = 12;
+    particles = [];
+
+    // Các mảnh neon bắn tung ra khi chạm gai
+    const colors = ["#ff1744", "#ff3d81", "#ffffff", "#00e5ff", "#ff9100"];
+    for (let i = 0; i < 34; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const power = 2 + Math.random() * 6;
+        particles.push({
+            x: cx, y: cy,
+            vx: Math.cos(angle) * power,
+            vy: Math.sin(angle) * power - 1.5,
+            size: 3 + Math.random() * 7,
+            life: 1,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            spin: (Math.random() - 0.5) * 0.25,
+            rotation: Math.random() * Math.PI
+        });
+    }
+}
+
+function startVictoryEffect() {
+    winStarted = performance.now();
+    winParticles = [];
+    victoryTrail = [];
+    victoryBurst = [];
+    victoryPlayerY = player.y;
+    victoryPlayerX = player.x;
+
+    // Hạt nền nhẹ, chỉ xuất hiện rõ sau khi chạm cổng.
+    const colors = ["#fff176", "#ffe95b", "#ffffff", "#ffef9a"];
+    for (let i = 0; i < 95; i++) {
+        winParticles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 1.8,
+            vy: 0.5 + Math.random() * 2.6,
+            size: 2 + Math.random() * 6,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 0.12,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            alpha: 0.45 + Math.random() * 0.55
+        });
+    }
+}
+
+function createFinishBurst(cx, cy) {
+    victoryBurst = [];
+    const colors = ["#fff176", "#ffe95b", "#ffffff", "#ffef9a", "#43e8ff"];
+    for (let i = 0; i < 125; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const power = 2 + Math.random() * 8;
+        victoryBurst.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * power,
+            vy: Math.sin(angle) * power,
+            size: 3 + Math.random() * 8,
+            life: 1,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 0.22,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
+    }
+}
+
+
+
+// ============================================================
+// PLAYER
+// ============================================================
+
+const player = {
+
+    x: 180,
+
+    y: 440,
+
+    size: 54,
+
+    vy: 0,
+
+    gravity: 0.85,
+
+    jumpPower: -13.8,
+
+    isGrounded: false,
+
+    rotation: 0
+
 };
-let selected="NORMAL",state="MENU",progress=0,distance=0;
-let speed=6.7,gravity=.78,jumpPower=-14.7;
-let obstacles=[],particles=[],burst=[],trail=[];
-let menuCube={x:90,y:FLOOR-44,vy:0,rot:0,ground:true,nextJump:0};
-let menuDistance=0,menuLast=0,menuObs=[];
-let player={x:180,y:FLOOR-48,size:48,vy:0,rot:0,ground:true};
-let gateX=0,finishStart=0,finishPhase=0,finishX=0,finishY=0;
-let deathStart=0,shake=0,startedAt=0;
 
-function rand(a,b){return a+Math.random()*(b-a)}
-function choice(a){return a[Math.floor(Math.random()*a.length)]}
-function audioPlay(a){try{a.currentTime=0;a.play().catch(()=>{})}catch(e){}}
-function stopAudio(a){a.pause();a.currentTime=0}
-function stopAllAudio(){stopAudio(music);stopAudio(victorySound)}
 
-function background(t,offset=0){
- const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#02071d");g.addColorStop(.55,"#071744");g.addColorStop(1,"#020617");
- ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- for(let i=0;i<90;i++){
-  let x=(i*149-offset*(.025+(i%4)*.012)+W*4)%W;
-  let y=(i*83)%390;
-  ctx.globalAlpha=.25+.65*Math.abs(Math.sin(t/700+i));
-  ctx.fillStyle=i%5===0?"#00eaff":"#dcefff";
-  ctx.fillRect(x,y,i%7===0?3:2,i%7===0?3:2);
- }
- ctx.globalAlpha=1;
- // Núi hình học xanh đen
- for(let layer=0;layer<2;layer++){
-  ctx.beginPath();ctx.moveTo(0,FLOOR);
-  let step=layer?72:95,base=layer?405:365;
-  for(let x=-step;x<W+step;x+=step){
-   let xx=x-(offset*(layer?.14:.08))%step;
-   ctx.lineTo(xx,base-((Math.floor((x+step)/step)%2===0)?70:0));
-  }
-  ctx.lineTo(W,FLOOR);ctx.closePath();
-  ctx.fillStyle=layer?"#07102e":"#0b1c50";ctx.fill();
- }
- // Thành phố neon
- for(let i=0;i<31;i++){
-  let bw=18+(i%3)*8,bh=25+(i*31%90);
-  let x=(i*43-offset*.35+5000)%(W+40)-20;
-  ctx.fillStyle="#040b25";ctx.fillRect(x,FLOOR-bh,bw,bh);
-  ctx.fillStyle=i%2?"#ff35ce":"#00dfff";
-  ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=7;
-  for(let y=FLOOR-bh+8;y<FLOOR-4;y+=14){
-   ctx.fillRect(x+4,y,4,5);
-   if(bw>23)ctx.fillRect(x+13,y,4,5);
-  }
-  ctx.shadowBlur=0;
- }
- ctx.fillStyle="#020718";ctx.fillRect(0,FLOOR,W,H-FLOOR);
- ctx.fillStyle="#dffcff";ctx.shadowColor="#00eaff";ctx.shadowBlur=17;
- ctx.fillRect(0,FLOOR,W,4);ctx.shadowBlur=0;
+const floorY = 500;
+
+const LEVEL_LENGTH = 5000;
+
+
+// ============================================================
+// OBSTACLES
+// ============================================================
+
+const levelObstacles = [
+    { x: 600, type: "spike" },
+    { x: 900, type: "spike" },
+    { x: 1200, type: "block" },
+
+    // Cặp gai 5-6: đặt sát nhau, không còn khe hở.
+    { x: 1500, type: "spike" },
+    { x: 1535, type: "spike" },
+    { x: 1900, type: "block" },
+    { x: 2100, type: "spike" },
+    { x: 2320, type: "block" },
+
+    // Ba gai nối liền nhau, mỗi gai rộng 35 px.
+    { x: 2620, type: "spike" },
+    { x: 2655, type: "spike" },
+    { x: 2690, type: "spike" },
+    { x: 3050, type: "block" },
+    { x: 3270, type: "spike" },
+    { x: 3305, type: "spike" }
+];
+
+
+let activeObstacles = [];
+
+
+// ============================================================
+// MUSIC
+// ============================================================
+
+function playMusic() {
+
+    bgMusic.currentTime = 0;
+
+    bgMusic.play().catch(function(error) {
+
+        console.log("Music blocked:", error);
+
+    });
+
 }
 
-function drawCube(x,y,size,rot,skin=true){
- ctx.save();ctx.translate(x+size/2,y+size/2);ctx.rotate(rot);
- ctx.shadowColor="#00f5ff";ctx.shadowBlur=15;
- if(skin&&playerImg.complete&&playerImg.naturalWidth){
-  ctx.drawImage(playerImg,-size/2,-size/2,size,size);
- }else{
-  ctx.fillStyle="#00edff";ctx.fillRect(-size/2,-size/2,size,size);
-  ctx.strokeStyle="#baffff";ctx.lineWidth=3;ctx.strokeRect(-size/2,-size/2,size,size);
-  ctx.fillStyle="#031126";ctx.fillRect(-size*.28,-size*.2,size*.17,size*.2);
-  ctx.fillRect(size*.1,-size*.2,size*.17,size*.2);
-  ctx.fillRect(-size*.25,size*.15,size*.5,size*.1);
- }
- ctx.restore();ctx.shadowBlur=0;
+
+function stopMusic() {
+
+    bgMusic.pause();
+
+    bgMusic.currentTime = 0;
+
 }
 
-function drawSpike(x,y,size=35){
- ctx.save();ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+size/2,y-size);ctx.lineTo(x+size,y);ctx.closePath();
- ctx.fillStyle="#081638";ctx.strokeStyle="#00dfff";ctx.lineWidth=3;
- ctx.shadowColor="#00cfff";ctx.shadowBlur=10;ctx.fill();ctx.stroke();ctx.restore();
-}
-function drawBlock(x,y,w=48,h=48){
- ctx.save();ctx.fillStyle="#0b1e4a";ctx.strokeStyle="#00eaff";ctx.lineWidth=3;
- ctx.shadowColor="#00dfff";ctx.shadowBlur=10;ctx.fillRect(x,y-h,w,h);ctx.strokeRect(x,y-h,w,h);ctx.restore();
-}
-function addBurst(x,y,count=120){
- const colors=["#fff176","#ffe95b","#ffffff","#00eaff","#f8fdff"];
- for(let i=0;i<count;i++){
-  let a=rand(0,Math.PI*2),v=rand(2,9);
-  burst.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,size:rand(3,9),life:1,rot:rand(0,6),spin:rand(-.2,.2),color:choice(colors)});
- }
-}
-function drawGate(x,active=false,t=0){
- const top=FLOOR-220,w=84,h=220;
- ctx.save();
- const pulse=active?1+.2*Math.sin(t/65):1;
- ctx.shadowColor="#00eaff";ctx.shadowBlur=active?38:22;
- ctx.lineWidth=active?9:8;ctx.strokeStyle="#00eaff";
- ctx.beginPath();ctx.moveTo(x, FLOOR);ctx.lineTo(x,top+40);
- ctx.quadraticCurveTo(x,top,x+w/2,top);ctx.quadraticCurveTo(x+w,top,x+w,top+40);
- ctx.lineTo(x+w,FLOOR);ctx.stroke();
- const gr=ctx.createLinearGradient(x,top,x+w,FLOOR);
- gr.addColorStop(0,"rgba(0,180,255,.4)");gr.addColorStop(.5,"rgba(80,245,255,.13)");gr.addColorStop(1,"rgba(0,130,255,.45)");
- ctx.fillStyle=gr;ctx.fillRect(x+7,top+40,w-14,h-40);
- ctx.beginPath();ctx.ellipse(x+w/2,top+h*.56,24,78,0,0,Math.PI*2);
- ctx.strokeStyle="#dfffff";ctx.lineWidth=2.5;ctx.stroke();
- if(active){
-  const glow=ctx.createRadialGradient(x+w/2,top+120,1,x+w/2,top+120,130*pulse);
-  glow.addColorStop(0,"rgba(255,255,255,.9)");glow.addColorStop(.35,"rgba(0,240,255,.4)");glow.addColorStop(1,"rgba(0,100,255,0)");
-  ctx.fillStyle=glow;ctx.fillRect(x-90,top-20,w+180,h+40);
- }
- ctx.restore();
- ctx.fillStyle="#8efaff";ctx.font="bold 26px Arial";ctx.textAlign="center";
- ctx.shadowColor="#00eaff";ctx.shadowBlur=12;ctx.fillText("FINISH",x+w/2,top-17);ctx.shadowBlur=0;
+
+// ============================================================
+// DEATH SOUND
+// ============================================================
+
+function playDeathSound() {
+
+    deathSound.currentTime = 0;
+
+    deathSound.play().catch(function(error) {
+
+        console.log("Death sound blocked:", error);
+
+    });
+
 }
 
-function drawTrail(x,y,t){
- const colors=["#ff3b9d","#ff8a35","#ffe84a","#58ff85","#43e8ff","#6875ff","#d66bff"];
- ctx.save();ctx.lineCap="round";
- for(let i=0;i<colors.length;i++){
-  ctx.beginPath();ctx.moveTo(-20,FLOOR-60+(i-3)*4);
-  ctx.bezierCurveTo(W*.13,FLOOR-145+(i-3)*4,W*.24,FLOOR-190+(i-3)*4,x-20,y+20);
-  ctx.strokeStyle=colors[i];ctx.globalAlpha=Math.max(0,.82-t/3500);ctx.lineWidth=i===3?7:5;
-  ctx.shadowColor=colors[i];ctx.shadowBlur=14;ctx.stroke();
- }
- ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
+
+// ============================================================
+// VICTORY FANFARE
+// ============================================================
+
+function playVictorySound() {
+    victorySound.pause();
+    victorySound.currentTime = 0;
+    victorySound.play().catch(function(error) {
+        console.log("Victory sound blocked:", error);
+    });
 }
 
-function drawVictory(t){
- const gx=W*.62,top=FLOOR-220,gy=top+120;
- ctx.fillStyle=`rgba(2,7,25,${Math.max(0,.25-t/6500)})`;ctx.fillRect(0,0,W,H);
- const halo=ctx.createRadialGradient(gx,gy,2,gx,gy,220);
- halo.addColorStop(0,"rgba(220,255,255,.75)");halo.addColorStop(.25,"rgba(0,235,255,.48)");halo.addColorStop(1,"rgba(0,100,255,0)");
- ctx.fillStyle=halo;ctx.fillRect(gx-230,top-30,460,300);
- for(let i=0;i<3;i++){
-  let r=45+((t*.16+i*60)%155);
-  ctx.beginPath();ctx.ellipse(gx,gy,r*.85,r,0,0,Math.PI*2);
-  ctx.strokeStyle=i===0?"#ffffff":"#00dfff";ctx.globalAlpha=Math.max(0,1-(r-45)/155);
-  ctx.lineWidth=2;ctx.stroke();
- }
- ctx.globalAlpha=1;
- drawGate(gx-42,true,t);
- drawTrail(gx,gy,t);
- for(const p of burst){
-  ctx.save();ctx.globalAlpha=Math.max(0,p.life);ctx.translate(p.x,p.y);ctx.rotate(p.rot);
-  ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=12;
-  ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size);ctx.restore();
- }
- for(const p of particles){
-  ctx.save();ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=8;
-  ctx.fillRect(p.x,p.y,p.size,p.size);ctx.restore();
- }
- ctx.save();ctx.textAlign="center";ctx.textBaseline="middle";
- const fs=52;ctx.font=`900 ${fs}px monospace`;ctx.lineJoin="round";
- ctx.lineWidth=10;ctx.strokeStyle="#06131b";ctx.shadowColor="#8cff36";ctx.shadowBlur=18;
- ctx.strokeText("LEVEL COMPLETE!",W/2,195);
- ctx.lineWidth=5;ctx.strokeStyle="#3c9e18";ctx.strokeText("LEVEL COMPLETE!",W/2,195);
- ctx.fillStyle="#83ff35";ctx.fillText("LEVEL COMPLETE!",W/2,195);
- ctx.lineWidth=1.5;ctx.strokeStyle="#e8ffc7";ctx.strokeText("LEVEL COMPLETE!",W/2,195);
- ctx.restore();
- ctx.textAlign="center";ctx.font="bold 18px monospace";ctx.fillStyle="#e8faff";
- ctx.fillText("100%  •  Nhấn SPACE hoặc Click để chơi lại",W/2,H-28);
+function stopVictorySound() {
+    victorySound.pause();
+    victorySound.currentTime = 0;
 }
 
-function drawMenu(t){
- background(t,menuDistance);
- // Tiêu đề
- ctx.textAlign="center";ctx.font="900 72px monospace";
- ctx.lineJoin="round";ctx.lineWidth=12;ctx.strokeStyle="#00214d";
- ctx.shadowColor="#00dfff";ctx.shadowBlur=22;ctx.strokeText("GEOMETRY DASH",W/2,100);
- ctx.lineWidth=5;ctx.strokeStyle="#00dfff";ctx.strokeText("GEOMETRY DASH",W/2,100);
- ctx.fillStyle="#b7fbff";ctx.fillText("GEOMETRY DASH",W/2,100);ctx.shadowBlur=0;
- ctx.font="bold 25px monospace";ctx.fillStyle="#00eaff";
- ctx.fillText("— CUSTOM FACE EDITION —",W/2,145);
- // Thẻ cấp độ
- const cards=[
-  {id:"EASY",x:190,color:"#00ff70",stars:"★☆☆",face:"☺"},
-  {id:"NORMAL",x:455,color:"#00cfff",stars:"★★☆",face:"◉"},
-  {id:"HARD",x:720,color:"#d900ff",stars:"★★★",face:"⌁"}
- ];
- for(const c of cards){
-  let chosen=selected===c.id;
-  ctx.save();ctx.shadowColor=c.color;ctx.shadowBlur=chosen?25:12;
-  ctx.fillStyle=chosen?"rgba(0,100,140,.25)":"rgba(5,12,45,.8)";
-  ctx.strokeStyle=c.color;ctx.lineWidth=chosen?5:3;
-  roundRect(c.x,185,230,245,22);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
-  // Cube icon
-  ctx.fillStyle=c.color;ctx.strokeStyle="#020b20";ctx.lineWidth=5;
-  roundRect(c.x+70,210,90,85,12);ctx.fill();ctx.stroke();
-  ctx.fillStyle="#031126";ctx.fillRect(c.x+88,232,15,18);ctx.fillRect(c.x+128,232,15,18);
-  ctx.fillRect(c.x+91,265,52,8);
-  ctx.fillStyle="#ffffff";ctx.font="bold 28px monospace";ctx.fillText(c.id,c.x+115,326);
-  ctx.fillStyle="#ffd94a";ctx.font="28px Arial";ctx.fillText(c.stars,c.x+115,360);
-  ctx.fillStyle=c.color;ctx.shadowColor=c.color;ctx.shadowBlur=14;
-  roundRect(c.x+22,380,186,38,13);ctx.fill();ctx.shadowBlur=0;
-  ctx.fillStyle="#ffffff";ctx.font="bold 23px monospace";ctx.fillText("▶ PLAY",c.x+115,407);
-  ctx.restore();
- }
- // Sảnh có chướng ngại vật
- for(const o of menuObs){
-  if(o.type==="spike")drawSpike(o.x,FLOOR,35);
-  else drawBlock(o.x,FLOOR,45,45);
- }
- // Vệt cầu vồng và khối tự chạy
- ctx.save();ctx.globalAlpha=.72;drawTrail(menuCube.x,menuCube.y,0);ctx.restore();
- drawCube(menuCube.x,menuCube.y,44,menuCube.rot,false);
- ctx.fillStyle="#e8faff";ctx.font="16px Arial";
- ctx.fillText("Chọn cấp độ và nhấn PLAY",W/2,480);
+
+// ============================================================
+// START / JUMP
+// ============================================================
+
+function jump() {
+
+    if (
+        gameState === "MENU" ||
+        gameState === "START" ||
+        gameState === "GAMEOVER" ||
+        gameState === "VICTORY"
+    ) {
+
+        resetGame();
+
+        gameState = "PLAYING";
+
+        playMusic();
+
+        return;
+    }
+
+
+    if (
+        gameState === "PLAYING" &&
+        player.isGrounded
+    ) {
+
+        player.vy = player.jumpPower;
+
+        player.isGrounded = false;
+
+    }
+
 }
 
-function roundRect(x,y,w,h,r){
- ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
- ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);
- ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
-}
 
-function startGame(){
- state="PLAYING";distance=0;progress=0;obstacles=[];
- particles=[];burst=[];trail=[];
- speed=difficulties[selected].speed;
- gravity=difficulties[selected].gravity;
- jumpPower=difficulties[selected].jump;
- player={x:180,y:FLOOR-48,size:48,vy:0,rot:0,ground:true};
- for(let i=0;i<18;i++){
-  let x=480+i*difficulties[selected].gap;
-  obstacles.push({x,type:i%4===2?"block":"spike",w:35,h:i%4===2?45:35});
- }
- finishX=4800;finishPhase=0;
- stopAudio(victorySound);audioPlay(music);
- info.innerText="Độ khó: "+selected+" • Tiến độ: 0%";
-}
-function die(){
- if(state!=="PLAYING")return;
- state="GAMEOVER";deathStart=performance.now();stopAudio(music);audioPlay(deathSound);
- particles=[];
- for(let i=0;i<35;i++){
-  let a=rand(0,Math.PI*2),v=rand(2,7);
-  particles.push({x:player.x+24,y:player.y+24,vx:Math.cos(a)*v,vy:Math.sin(a)*v,size:rand(3,8),life:1,color:choice(["#ff1744","#ff3d81","#ffffff","#00e5ff","#ff9100"])});
- }
-}
-function win(){
- if(state!=="PLAYING")return;
- state="VICTORY";finishPhase=2;finishStart=performance.now();
- stopAudio(music);audioPlay(victorySound);addBurst(W*.62,FLOOR-330,145);
- info.innerText="LEVEL COMPLETE!";
-}
-function jump(){
- if(state==="MENU"){startGame();return}
- if(state==="GAMEOVER"||state==="VICTORY"){startGame();return}
- if(state==="PLAYING"&&player.ground){player.vy=jumpPower;player.ground=false}
-}
-function hit(a,b){
- return a.x+a.w>b.x&&a.x<b.x+b.w&&a.y+a.h>b.y&&a.y<b.y+b.h;
-}
-canvas.addEventListener("click",e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
- if(state==="MENU"){
-  if(y>=185&&y<=435){
-   if(x>=190&&x<=420)selected="EASY";
-   else if(x>=455&&x<=685)selected="NORMAL";
-   else if(x>=720&&x<=950)selected="HARD";
-   info.innerText="Đã chọn "+selected+" — nhấn PLAY để bắt đầu";
-   return;
-  }
-  if(y>440){startGame();return}
-  return;
- }
- jump();
+// ============================================================
+// KEYBOARD
+// ============================================================
+
+window.addEventListener("keydown", function(e) {
+
+    if (
+        e.code === "Space" ||
+        e.code === "ArrowUp"
+    ) {
+
+        e.preventDefault();
+        if (gameState === "MENU") {
+            resetGame();
+            gameState = "PLAYING";
+            playMusic();
+            info.innerText = "Độ khó: " + selectedDifficulty + " • Tiến độ: 0%";
+        } else {
+            jump();
+        }
+
+    }
+
 });
-window.addEventListener("keydown",e=>{
- if(e.code==="Space"||e.code==="ArrowUp"){
-  e.preventDefault();
-  if(state==="MENU"){startGame()}else{jump()}
- }
+
+
+// ============================================================
+// MOUSE
+// ============================================================
+
+canvas.addEventListener("mousedown", function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * canvas.width / rect.width;
+    const y = (e.clientY - rect.top) * canvas.height / rect.height;
+    if (gameState !== "MENU" && x >= 18 && x <= 145 && y >= 16 && y <= 62) {
+        goToMenu();
+        return;
+    }
+    if (gameState === "MENU") {
+        handleMenuClick(x, y);
+        return;
+    }
+    jump();
 });
-function updateMenu(t){
- menuDistance+=1.8;
- menuCube.x+=2.3;
- if(menuCube.x>W+60)menuCube.x=-50;
- if(menuCube.ground&&t>menuCube.nextJump){
-  menuCube.vy=-rand(10,15);menuCube.ground=false;menuCube.nextJump=t+rand(500,1800);
- }
- menuCube.vy+=.48;menuCube.y+=menuCube.vy;
- if(menuCube.y>=FLOOR-44){menuCube.y=FLOOR-44;menuCube.vy=0;menuCube.ground=true}
- if(!menuLast||t-menuLast>rand(650,1150)){
-  menuObs.push({x:W+20,type:Math.random()<.25?"block":"spike"});menuLast=t;
- }
- for(const o of menuObs)o.x-=3.1;
- menuObs=menuObs.filter(o=>o.x>-60);
+
+function goToMenu() {
+    stopMusic(); stopVictorySound();
+    deathSound.pause(); deathSound.currentTime = 0;
+    gameState = "MENU"; distance = 0;
+    particles = []; winParticles = []; victoryTrail = []; victoryBurst = [];
+    menuCube.x = 80; menuCube.y = floorY - 44; menuCube.vy = 0;
+    menuCube.grounded = true; menuCube.nextJump = performance.now() + 300;
+    info.innerText = "Chọn EASY, NORMAL hoặc HARD để bắt đầu!";
 }
-function update(){
- const t=performance.now();
- if(state==="MENU"){updateMenu(t);return}
- if(state==="PLAYING"){
-  distance+=speed;progress=Math.min(99,Math.floor(distance/finishX*100));
-  player.vy+=gravity;player.y+=player.vy;
-  if(player.y+player.size>=FLOOR){player.y=FLOOR-player.size;player.vy=0;player.ground=true}
-  else player.ground=false;
-  if(!player.ground)player.rot+=.13;
-  for(const o of obstacles){
-   o.x-=speed;
-   let box={x:player.x+7,y:player.y+7,w:player.size-14,h:player.size-14};
-   let obstacleBox=o.type==="spike"?{x:o.x+8,y:FLOOR-27,w:19,h:27}:{x:o.x,y:FLOOR-o.h,w:o.w||45,h:o.h};
-   if(hit(box,obstacleBox)){die();break}
-  }
-  obstacles=obstacles.filter(o=>o.x>-60);
-  if(distance>=finishX){win()}
-  info.innerText="Độ khó: "+selected+" • Tiến độ: "+progress+"%";
- }
- if(state==="GAMEOVER"){
-  for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life-=.018}
-  particles=particles.filter(p=>p.life>0);
- }
- if(state==="VICTORY"){
-  let elapsed=t-finishStart;
-  for(const p of burst){p.x+=p.vx;p.y+=p.vy;p.vy+=.045;p.vx*=.99;p.life-=.009;p.rot+=p.spin}
-  burst=burst.filter(p=>p.life>0);
-  for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.life-=.02}
-  particles=particles.filter(p=>p.life>0);
- }
+
+
+// ============================================================
+// RESET
+// ============================================================
+
+function resetGame() {
+
+    stopVictorySound();
+
+    player.x = 180;
+    victoryPlayerX = player.x;
+    player.x = 180;
+    player.y = floorY - player.size;
+
+    player.vy = 0;
+
+    player.rotation = 0;
+
+    player.isGrounded = true;
+
+    distance = 0;
+    particles = [];
+    winParticles = [];
+    victoryTrail = [];
+    victoryBurst = [];
+    screenShake = 0;
+
+    const difficultyConfig = {
+        EASY:   { speed: 6.0, obstacleLimit: 7 },
+        NORMAL: { speed: 7.0, obstacleLimit: levelObstacles.length },
+        HARD:   { speed: 8.4, obstacleLimit: levelObstacles.length }
+    };
+    const cfg = difficultyConfig[selectedDifficulty] || difficultyConfig.NORMAL;
+    speed = cfg.speed;
+    activeObstacles = levelObstacles.slice(0, cfg.obstacleLimit).map(function(obs) {
+        return { x: obs.x, width: 35, height: 35, type: obs.type };
+    });
+
 }
-function draw(){
- const t=performance.now();
- ctx.clearRect(0,0,W,H);
- background(t,state==="MENU"?menuDistance:distance);
- if(state==="MENU"){drawMenu(t);return}
- if(state==="PLAYING"){
-  for(const o of obstacles){
-   if(o.type==="spike")drawSpike(o.x,FLOOR,o.h);
-   else drawBlock(o.x,FLOOR,o.w||45,o.h);
-  }
-  if(distance>finishX-500){
-   let gx=W*.72;
-   drawGate(gx,false,t);
-  }
-  drawCube(player.x,player.y,player.size,player.rot,true);
- }
- if(state==="GAMEOVER"){
-  for(const p of particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size)}
-  ctx.globalAlpha=1;ctx.fillStyle="rgba(0,0,0,.76)";ctx.fillRect(0,0,W,H);
-  ctx.textAlign="center";ctx.fillStyle="#ff1744";ctx.font="bold 58px Arial";
-  ctx.shadowColor="#ff1744";ctx.shadowBlur=18;ctx.fillText("GAME OVER",W/2,100);ctx.shadowBlur=0;
-  if(trollImg.complete&&trollImg.naturalWidth)ctx.drawImage(trollImg,W/2-105,155,210,210);
-  ctx.fillStyle="#ffffff";ctx.font="bold 22px Arial";ctx.fillText("Bạn đã thua!",W/2,410);
-  ctx.font="18px Arial";ctx.fillText("Nhấn SPACE hoặc click để chơi lại",W/2,450);
- }
- if(state==="VICTORY")drawVictory(t-finishStart);
+
+
+// ============================================================
+// UPDATE
+// ============================================================
+
+function update() {
+
+    // Sảnh chờ: khối vuông chạy và tự nhảy qua chướng ngại vật theo nhịp ngẫu nhiên.
+    if (gameState === "MENU") {
+        menuDistance += 3.2 * frameScale;
+        menuCube.x += 2.4 * frameScale;
+        if (menuCube.x > canvas.width + 50) menuCube.x = -55;
+        const ground = floorY - 0;
+        if (!menuCube.y) menuCube.y = floorY - 44;
+        menuCube.vy += 0.72 * frameScale;
+        menuCube.y += menuCube.vy * frameScale;
+        if (menuCube.y >= floorY - 44) {
+            menuCube.y = floorY - 44;
+            menuCube.vy = 0;
+            menuCube.grounded = true;
+            menuCube.rotation = Math.round(menuCube.rotation / (Math.PI / 2)) * (Math.PI / 2);
+            if (performance.now() > menuCube.nextJump) {
+                // Thời gian giữa các cú nhảy thay đổi ngẫu nhiên.
+                if (Math.random() < 0.78) {
+                    menuCube.vy = -(10.5 + Math.random() * 1.8);
+                    menuCube.grounded = false;
+                }
+                menuCube.nextJump = performance.now() + 450 + Math.random() * 1100;
+            }
+        } else {
+            menuCube.grounded = false;
+            menuCube.rotation += 0.12 * frameScale;
+        }
+        if (performance.now() - menuLastObstacle > 750 + Math.random() * 800) {
+            menuObstacles.push({ x: canvas.width + 30, type: Math.random() < 0.72 ? "spike" : "block", size: 25 + Math.random() * 18 });
+            menuLastObstacle = performance.now();
+        }
+        menuObstacles.forEach(o => o.x -= 4.0 * frameScale);
+        menuObstacles = menuObstacles.filter(o => o.x > -70);
+        return;
+    }
+
+    // Giai đoạn 1: khối vuông xoay, bay theo đường cong và lao vào tường FINISH.
+    if (gameState === "WINNING") {
+        const elapsed = performance.now() - winningStarted;
+        const duration = 2100;
+        const progress = Math.min(1, elapsed / duration);
+        const wallX = canvas.width * 0.62;
+        const startX = 180;
+        const endX = wallX - player.size * 0.9;
+        const baseY = floorY - player.size;
+        const eased = progress * progress * (3 - 2 * progress);
+
+        player.x = startX + (endX - startX) * eased;
+        player.y = baseY - Math.sin(progress * Math.PI) * 145 + Math.sin(progress * Math.PI * 2) * 18;
+        player.rotation += 0.28 + progress * 0.34;
+
+        // Vệt cầu vồng bám sát phía sau khối vuông.
+        const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
+        for (let i = 0; i < 3; i++) {
+            victoryTrail.push({
+                x: player.x + player.size * 0.18 + Math.random() * 8,
+                y: player.y + player.size * (0.25 + Math.random() * 0.5),
+                size: 5 + Math.random() * 10,
+                life: 1,
+                color: rainbow[Math.floor(Math.random() * rainbow.length)]
+            });
+        }
+        victoryTrail.forEach(p => { p.x -= 1.8; p.life -= 0.022; p.size *= 0.99; });
+        victoryTrail = victoryTrail.filter(p => p.life > 0);
+
+        if (progress >= 1) {
+            // Giai đoạn 2: khối vuông chạm cổng, bùng sáng và biến mất.
+            const impactX = wallX;
+            const impactY = player.y + player.size / 2;
+            createFinishBurst(impactX, impactY);
+            victoryPlayerX = player.x;
+            victoryPlayerY = player.y;
+            player.x = -1000;
+            player.y = -1000;
+            gameState = "VICTORY";
+            winStarted = performance.now();
+            stopMusic();
+            playVictorySound();
+            info.innerText = "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
+        }
+        return;
+    }
+
+    if (gameState === "VICTORY") {
+        const t = performance.now() - winStarted;
+
+        // Khối vuông bay lên nhẹ và xoay liên tục
+        player.y = victoryPlayerY - Math.min(105, t * 0.055) + Math.sin(t / 115) * 8;
+        player.rotation += 0.105;
+
+        // Tạo vệt cầu vồng phía sau khối vuông
+        if (Math.random() < 0.92) {
+            const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
+            victoryTrail.push({
+                x: player.x + player.size * 0.28 + Math.random() * 8,
+                y: player.y + player.size * (0.35 + Math.random() * 0.3),
+                size: 7 + Math.random() * 10,
+                life: 1,
+                color: rainbow[Math.floor(Math.random() * rainbow.length)]
+            });
+        }
+        victoryTrail.forEach(p => { p.x -= 2.2; p.life -= 0.025; p.size *= 0.992; });
+        victoryTrail = victoryTrail.filter(p => p.life > 0);
+
+        for (const p of victoryBurst) {
+            p.x += p.vx; p.y += p.vy;
+            p.vy += 0.035; p.vx *= 0.992;
+            p.life -= 0.009; p.rotation += p.spin;
+        }
+        victoryBurst = victoryBurst.filter(p => p.life > 0);
+
+        for (const p of winParticles) {
+            p.x += p.vx; p.y += p.vy; p.rotation += p.spin;
+            if (p.y > canvas.height + 12) {
+                p.y = -10; p.x = Math.random() * canvas.width;
+            }
+            if (p.x < -10) p.x = canvas.width + 10;
+            if (p.x > canvas.width + 10) p.x = -10;
+        }
+        return;
+    }
+
+    if (gameState === "DYING") {
+        const elapsed = performance.now() - deathStarted;
+        for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.16;
+            p.vx *= 0.985;
+            p.life -= 0.022;
+            p.rotation += p.spin;
+        }
+        particles = particles.filter(p => p.life > 0);
+        screenShake *= 0.82;
+        if (elapsed > 700) gameState = "GAMEOVER";
+        return;
+    }
+
+    if (gameState !== "PLAYING") return;
+
+    distance += speed * frameScale;
+
+
+    let progress =
+        Math.min(
+            100,
+            Math.floor(
+                distance / LEVEL_LENGTH * 100
+            )
+        );
+
+
+    // Gravity
+
+    player.vy += player.gravity * frameScale;
+
+    player.y += player.vy * frameScale;
+
+
+    // Ground
+
+    if (player.y + player.size >= floorY) {
+
+        player.y =
+            floorY - player.size;
+
+        player.vy = 0;
+
+        player.isGrounded = true;
+
+        player.rotation =
+            Math.round(
+                player.rotation /
+                (Math.PI / 2)
+            ) *
+            (Math.PI / 2);
+
+    }
+    else {
+
+        player.rotation += 0.15 * frameScale;
+
+    }
+
+
+    // ========================================================
+    // COLLISION
+    // ========================================================
+
+    for (let obs of activeObstacles) {
+
+        let currentX =
+            obs.x -
+            distance +
+            player.x;
+
+        let hitMargin = 6;
+
+
+        if (
+
+            player.x +
+            player.size -
+            hitMargin >
+            currentX
+
+            &&
+
+            player.x +
+            hitMargin <
+            currentX +
+            obs.width
+
+            &&
+
+            player.y +
+            player.size -
+            hitMargin >
+            floorY -
+            obs.height
+
+        ) {
+
+            startDeathEffect(
+                player.x + player.size / 2,
+                player.y + player.size / 2
+            );
+
+            stopMusic();
+            playDeathSound();
+            info.innerText = "💥 BÙM! Bạn đã chạm chướng ngại vật...";
+            break;
+
+        }
+
+    }
+
+
+    // ========================================================
+    // VICTORY
+    // ========================================================
+
+    if (distance >= LEVEL_LENGTH) {
+        gameState = "WINNING";
+        winningStarted = performance.now();
+        startVictoryEffect();
+        victoryPlayerX = player.x;
+        info.innerText = "✨ ĐANG LAO VÀO TƯỜNG FINISH!";
+    }
+    else if (gameState === "PLAYING") {
+
+        info.innerText =
+            "Tiến độ: " +
+            progress +
+            "%";
+
+    }
+
 }
-function loop(){
- update();draw();requestAnimationFrame(loop);
+
+
+// ============================================================
+// BACKGROUND
+// ============================================================
+
+function drawBackground() {
+    // Nền xanh đen kiểu Geometry Dash — không còn phủ nền tím.
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#020719");
+    grad.addColorStop(0.55, "#07143b");
+    grad.addColorStop(1, "#020617");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Sao nhỏ nhấp nháy.
+    for (let i = 0; i < 78; i++) {
+        const x = ((i * 137 - distance * (0.08 + (i % 3) * 0.025) + 4000) % canvas.width + canvas.width) % canvas.width;
+        const y = (i * 47 + 19) % 285;
+        ctx.globalAlpha = 0.28 + 0.65 * Math.abs(Math.sin(performance.now() / 650 + i));
+        ctx.fillStyle = i % 6 === 0 ? "#00eaff" : "#ffffff";
+        ctx.fillRect(x, y, i % 4 === 0 ? 3 : 2, i % 4 === 0 ? 3 : 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // Hai lớp núi hình học xanh đậm.
+    function mountainLayer(baseY, amp, step, color, parallax) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        for (let x = -step; x <= canvas.width + step; x += step) {
+            const xx = x - (distance * parallax) % step;
+            const peakY = baseY - amp * (0.35 + 0.65 * Math.abs(Math.sin((x + 70) * 0.027)));
+            ctx.lineTo(xx, peakY);
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.closePath();
+        ctx.fill();
+    }
+    mountainLayer(365, 85, 65, "#0b1b50", 0.12);
+    mountainLayer(400, 62, 45, "#07102f", 0.22);
+
+    // Thành phố neon sát đường chân trời.
+    for (let i = 0; i < 28; i++) {
+        const w = 15 + (i % 4) * 6;
+        const h = 25 + ((i * 29) % 65);
+        let x = ((i * 43 - distance * 0.32 + 5000) % (canvas.width + 50));
+        if (x > canvas.width) x -= canvas.width + 50;
+        ctx.fillStyle = "#050b25";
+        ctx.fillRect(x, floorY - h, w, h);
+        ctx.fillStyle = i % 2 === 0 ? "#00eaff" : "#ff35ce";
+        ctx.globalAlpha = 0.8;
+        for (let wy = floorY - h + 8; wy < floorY - 5; wy += 13) {
+            ctx.fillRect(x + 4, wy, 3, 4);
+            if (w > 22) ctx.fillRect(x + 12, wy, 3, 4);
+        }
+        ctx.globalAlpha = 1;
+    }
 }
-loop();
+
+// ============================================================
+// SẢNH CHỜ: 3 CẤP ĐỘ + KHỐI VUÔNG TỰ CHẠY/NHẢY
+// ============================================================
+const menuCards = [
+    { id: "EASY", label: "EASY", color: "#00ff70", x: 175, stars: 1, face: "🙂" },
+    { id: "NORMAL", label: "NORMAL", color: "#00dfff", x: 495, stars: 2, face: "😠" },
+    { id: "HARD", label: "HARD", color: "#d72cff", x: 815, stars: 3, face: "😈" }
+];
+
+function handleMenuClick(x, y) {
+    // Click nút PLAY để bắt đầu ngay cấp độ tương ứng.
+    if (y >= 360 && y <= 410) {
+        for (const card of menuCards) {
+            if (x >= card.x + 15 && x <= card.x + 195) {
+                selectedDifficulty = card.id;
+                resetGame();
+                gameState = "PLAYING";
+                playMusic();
+                info.innerText = "Độ khó: " + card.label + " • Tiến độ: 0%";
+                return;
+            }
+        }
+    }
+    // Click phần thân thẻ để chọn độ khó.
+    if (y >= 175 && y <= 420) {
+        for (const card of menuCards) {
+            if (x >= card.x && x <= card.x + 210) {
+                selectedDifficulty = card.id;
+                info.innerText = "Đã chọn cấp độ " + card.label + " • Nhấn PLAY để bắt đầu";
+                return;
+            }
+        }
+    }
+    // Click khu vực đường chạy hoặc nhấn ngoài thẻ sẽ bắt đầu cấp đang chọn.
+    if (y > 445) {
+        resetGame();
+        gameState = "PLAYING";
+        playMusic();
+        info.innerText = "Độ khó: " + selectedDifficulty + " • Tiến độ: 0%";
+    }
+}
+
+function drawMenuCube(x, y, size, rotation, color) {
+    ctx.save();
+    ctx.translate(x + size / 2, y + size / 2);
+    ctx.rotate(rotation);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = color;
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#06152c";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-size / 2, -size / 2, size, size);
+    ctx.fillStyle = "#06152c";
+    ctx.fillRect(-size * .28, -size * .2, size * .18, size * .23);
+    ctx.fillRect(size * .1, -size * .2, size * .18, size * .23);
+    ctx.fillRect(-size * .25, size * .15, size * .5, size * .12);
+    ctx.restore();
+}
+
+function drawLobby() {
+    // Nền xanh đen neon, không sử dụng ảnh nền tím.
+    drawBackground();
+    const pulse = 0.75 + Math.sin(performance.now() / 260) * 0.15;
+
+    // Header logo.
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 64px monospace";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#031126";
+    ctx.shadowColor = "#00dfff";
+    ctx.shadowBlur = 25;
+    ctx.strokeText("GEOMETRY DASH", canvas.width / 2, 78);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#00dfff";
+    ctx.strokeText("GEOMETRY DASH", canvas.width / 2, 78);
+    ctx.fillStyle = "#e8ffff";
+    ctx.fillText("GEOMETRY DASH", canvas.width / 2, 78);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#00dfff";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("— CUSTOM FACE EDITION —", canvas.width / 2, 132);
+
+    // Gear icon and best score.
+    ctx.strokeStyle = "#00dfff";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "#00dfff";
+    ctx.shadowBlur = 15;
+    ctx.beginPath(); ctx.arc(48, 48, 27, 0, Math.PI * 2); ctx.stroke();
+    ctx.font = "bold 30px Arial"; ctx.fillStyle = "#c8ffff"; ctx.fillText("⚙", 48, 49);
+    ctx.beginPath(); ctx.arc(canvas.width - 75, 48, 27, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#00dfff"; ctx.font = "bold 17px monospace"; ctx.textAlign = "left";
+    ctx.fillText("BEST:", canvas.width - 40, 35);
+    ctx.fillStyle = "#ffffff"; ctx.fillText("0%", canvas.width - 40, 58);
+
+    // Difficulty cards.
+    for (const card of menuCards) {
+        const x = card.x, y = 178, w = 210, h = 240;
+        const chosen = selectedDifficulty === card.id;
+        ctx.save();
+        ctx.globalAlpha = chosen ? 1 : 0.78;
+        ctx.shadowColor = card.color;
+        ctx.shadowBlur = chosen ? 24 * pulse : 12;
+        ctx.fillStyle = card.color + "18";
+        ctx.strokeStyle = card.color;
+        ctx.lineWidth = chosen ? 4 : 3;
+        roundRect(ctx, x, y, w, h, 22, true, true);
+        ctx.shadowBlur = 0;
+        // Cube icon tile.
+        ctx.fillStyle = card.color + "33";
+        ctx.strokeStyle = card.color;
+        roundRect(ctx, x + 62, y + 22, 86, 82, 13, true, true);
+        drawMenuCube(x + 76, y + 35, 58, 0, card.color);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 27px monospace";
+        ctx.fillText(card.label, x + w / 2, y + 128);
+        ctx.font = "28px Arial";
+        for (let i = 0; i < 3; i++) {
+            ctx.fillStyle = i < card.stars ? "#ffe34d" : "#123c67";
+            ctx.fillText("★", x + 70 + i * 35, y + 160);
+        }
+        // Play button.
+        ctx.fillStyle = card.color + "cc";
+        ctx.strokeStyle = card.color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x + 20, y + 184, 170, 42, 14, true, true);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 22px monospace";
+        ctx.fillText("▶ PLAY", x + w / 2, y + 206);
+        if (chosen) {
+            ctx.fillStyle = card.color;
+            ctx.font = "bold 12px monospace";
+            ctx.fillText("SELECTED", x + w / 2, y + 234);
+        }
+        ctx.restore();
+    }
+
+    // Bottom runner lane.
+    const groundY = floorY;
+    ctx.fillStyle = "#040b25";
+    ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+    ctx.fillStyle = "#d9ffff"; ctx.shadowColor = "#00dfff"; ctx.shadowBlur = 22;
+    ctx.fillRect(0, groundY, canvas.width, 4); ctx.shadowBlur = 0;
+    // Decorative obstacles move continuously and appear at irregular intervals.
+    for (const o of menuObstacles) {
+        if (o.type === "spike") {
+            ctx.beginPath(); ctx.moveTo(o.x, groundY); ctx.lineTo(o.x + o.size / 2, groundY - o.size); ctx.lineTo(o.x + o.size, groundY); ctx.closePath();
+            ctx.fillStyle = "#071b40"; ctx.strokeStyle = "#00dfff"; ctx.lineWidth = 3; ctx.shadowColor = "#00dfff"; ctx.shadowBlur = 10; ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        } else {
+            ctx.fillStyle = "#071b40"; ctx.strokeStyle = "#00dfff"; ctx.lineWidth = 3; ctx.shadowColor = "#00dfff"; ctx.shadowBlur = 10;
+            ctx.fillRect(o.x, groundY - o.size, o.size, o.size); ctx.strokeRect(o.x, groundY - o.size, o.size, o.size); ctx.shadowBlur = 0;
+        }
+    }
+    // Rainbow trail on the decorative cube.
+    ctx.save(); ctx.lineCap = "round";
+    const trailCols = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
+    for (let i = 0; i < trailCols.length; i++) {
+        ctx.strokeStyle = trailCols[i]; ctx.globalAlpha = 0.62; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(menuCube.x - 100 + i * 2, menuCube.y + 20 + i * 2); ctx.lineTo(menuCube.x + 8, menuCube.y + 22); ctx.stroke();
+    }
+    ctx.restore();
+    drawMenuCube(menuCube.x, menuCube.y, 42, menuCube.rotation, "#28ff68");
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#d8faff";
+    ctx.font = "bold 15px monospace";
+    ctx.shadowColor = "#00dfff"; ctx.shadowBlur = 8;
+    ctx.fillText("CHỌN CẤP ĐỘ • CLICK PLAY ĐỂ BẮT ĐẦU", canvas.width / 2, 565);
+    ctx.shadowBlur = 0;
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+// ============================================================
+// NÚT VỀ SẢNH
+// ============================================================
+function drawMenuButton() {
+    ctx.save();
+    ctx.fillStyle = "rgba(3,18,45,0.92)";
+    ctx.strokeStyle = "#00eaff"; ctx.lineWidth = 2.5;
+    ctx.shadowColor = "#00dfff"; ctx.shadowBlur = 12;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(18,16,127,44,10); else ctx.rect(18,16,127,44);
+    ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = "#eaffff"; ctx.font = "bold 17px Arial";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("⌂ MENU",81.5,38); ctx.restore();
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+
+function draw() {
+
+    if (gameState === "MENU") {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawLobby();
+        return;
+    }
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    drawBackground();
+    drawMenuButton();
+
+    // ========================================================
+    // FLOOR
+    // ========================================================
+
+    ctx.fillStyle = "#e5fbff";
+
+    ctx.shadowColor = "#00e5ff";
+
+    ctx.shadowBlur = 18;
+
+    ctx.fillRect(
+        0,
+        floorY,
+        canvas.width,
+        4
+    );
+
+    ctx.shadowBlur = 0;
+
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, canvas.height);
+    floorGrad.addColorStop(0, "#10163d");
+    floorGrad.addColorStop(1, "#050817");
+    ctx.fillStyle = floorGrad;
+
+    ctx.fillRect(
+        0,
+        floorY + 4,
+        canvas.width,
+        canvas.height - floorY
+    );
+
+
+    // ========================================================
+    // PROGRESS BAR
+    // ========================================================
+
+    let progressRatio =
+        Math.min(
+            1,
+            distance / LEVEL_LENGTH
+        );
+
+
+    ctx.fillStyle =
+        "rgba(255,255,255,0.2)";
+
+    const barWidth = Math.min(560, canvas.width * 0.48);
+    const barX = (canvas.width - barWidth) / 2;
+    ctx.fillRect(
+        barX,
+        20,
+        barWidth,
+        14
+    );
+
+
+    ctx.fillStyle = "#00ffcc";
+
+    ctx.fillRect(
+        barX,
+        20,
+        barWidth * progressRatio,
+        14
+    );
+
+
+    // ========================================================
+    // FINISH PORTAL — cổng cyan giống ảnh tham khảo
+    // ========================================================
+    // Chỉ hiện cổng trong 650 đơn vị đường cuối cùng.
+    const finishX = (gameState === "WINNING" || gameState === "VICTORY")
+        ? canvas.width * 0.62
+        : player.x + (LEVEL_LENGTH - distance);
+    const shouldShowFinish = gameState === "WINNING" || gameState === "VICTORY" || distance >= LEVEL_LENGTH - 650;
+    if (shouldShowFinish && finishX > -150 && finishX < canvas.width + 150) {
+        const gateW = 100;
+        const gateH = 205;
+        const gateTop = floorY - gateH;
+        const pulse = 0.82 + 0.18 * Math.sin(performance.now() / 105);
+        ctx.save();
+        ctx.globalAlpha = pulse;
+
+        // Vầng sáng lớn phía sau cổng.
+        const halo = ctx.createRadialGradient(finishX, gateTop + gateH * 0.52, 8, finishX, gateTop + gateH * 0.52, 180);
+        halo.addColorStop(0, "rgba(0,255,255,0.45)");
+        halo.addColorStop(0.45, "rgba(0,170,255,0.20)");
+        halo.addColorStop(1, "rgba(0,120,255,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(finishX - 185, gateTop - 45, 370, gateH + 90);
+
+        // Lõi cổng xanh lam trong suốt.
+        const portalGrad = ctx.createLinearGradient(finishX - gateW / 2, 0, finishX + gateW / 2, 0);
+        portalGrad.addColorStop(0, "rgba(0,245,255,0.16)");
+        portalGrad.addColorStop(0.5, "rgba(45,130,255,0.55)");
+        portalGrad.addColorStop(1, "rgba(0,245,255,0.16)");
+        ctx.fillStyle = portalGrad;
+        ctx.beginPath();
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 42);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 42);
+        ctx.lineTo(finishX + gateW / 2, floorY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Viền cyan phát sáng.
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 10;
+        ctx.shadowColor = "#00eaff";
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 42);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 42);
+        ctx.lineTo(finishX + gateW / 2, floorY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Oval năng lượng ở giữa cổng.
+        ctx.strokeStyle = "#d8ffff";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#ffffff";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.ellipse(finishX, gateTop + gateH * 0.55, 25 + 3 * pulse, 64 + 3 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#dfffff";
+        ctx.font = "bold 22px Arial";
+        ctx.textAlign = "center";
+        ctx.shadowColor = "#00eaff";
+        ctx.shadowBlur = 15;
+        ctx.fillText("FINISH", finishX, gateTop - 18);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    // ========================================================
+    // OBSTACLES
+    // ========================================================
+
+    for (let obs of activeObstacles) {
+
+        let currentX =
+            obs.x -
+            distance +
+            player.x;
+
+
+        if (
+            currentX > -50 &&
+            currentX < canvas.width + 50
+        ) {
+
+
+            // SPIKE
+
+            if (obs.type === "spike") {
+
+                ctx.fillStyle = "#ff245f";
+
+                ctx.shadowColor = "#ff1744";
+
+                ctx.shadowBlur = 16;
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    currentX,
+                    floorY
+                );
+
+                ctx.lineTo(
+                    currentX +
+                    obs.width / 2,
+                    floorY -
+                    obs.height
+                );
+
+                ctx.lineTo(
+                    currentX +
+                    obs.width,
+                    floorY
+                );
+
+                ctx.closePath();
+
+                ctx.fill();
+
+                ctx.strokeStyle = "#ffffff";
+
+                ctx.lineWidth = 2;
+
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+
+            }
+
+
+            // BLOCK
+
+            else {
+
+                ctx.fillStyle = "#ff9900";
+
+                ctx.shadowColor = "#ff9900";
+
+                ctx.shadowBlur = 10;
+
+                ctx.fillRect(
+                    currentX,
+                    floorY - obs.height,
+                    obs.width,
+                    obs.height
+                );
+
+                ctx.strokeStyle = "#ffffff";
+
+                ctx.lineWidth = 2;
+
+                ctx.strokeRect(
+                    currentX,
+                    floorY - obs.height,
+                    obs.width,
+                    obs.height
+                );
+
+                ctx.shadowBlur = 0;
+
+            }
+
+        }
+
+    }
+
+
+    // ========================================================
+    // HIT EFFECT: MẢNH VỠ NEON BAY RA KHI CHẠM GAI
+    // ========================================================
+    if (gameState === "DYING") {
+        ctx.save();
+        for (const p of particles) {
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 14;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+    }
+
+    // ========================================================
+    // VỆT CẦU VỒNG KHI KHỐI VUÔNG ĐANG BAY TỚI FINISH
+    // ========================================================
+    if (gameState === "WINNING") {
+        ctx.save();
+        for (const p of victoryTrail) {
+            ctx.globalAlpha = Math.max(0, p.life) * 0.85;
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+    }
+
+    // ========================================================
+    // PLAYER
+    // ========================================================
+
+    if (gameState !== "DYING" && gameState !== "GAMEOVER" && gameState !== "VICTORY") {
+    ctx.save();
+
+    ctx.translate(
+        player.x + player.size / 2,
+        player.y + player.size / 2
+    );
+
+    ctx.rotate(player.rotation);
+
+
+    ctx.strokeStyle = "#00f0ff";
+
+    ctx.lineWidth = 3;
+
+    ctx.shadowColor = "#00f0ff";
+
+    ctx.shadowBlur = 10;
+
+    ctx.strokeRect(
+        -player.size / 2,
+        -player.size / 2,
+        player.size,
+        player.size
+    );
+
+    ctx.shadowBlur = 0;
+
+
+    if (playerImg.complete) {
+
+        ctx.drawImage(
+            playerImg,
+            -player.size / 2,
+            -player.size / 2,
+            player.size,
+            player.size
+        );
+
+    }
+    else {
+
+        ctx.fillStyle = "#00ffcc";
+
+        ctx.fillRect(
+            -player.size / 2,
+            -player.size / 2,
+            player.size,
+            player.size
+        );
+
+    }
+
+
+    ctx.restore();
+    }
+
+    // ========================================================
+    // START SCREEN
+    // ========================================================
+
+    if (gameState === "START") {
+
+        ctx.fillStyle =
+            "rgba(0,0,0,0.7)";
+
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        ctx.fillStyle = "#00f0ff";
+
+        ctx.font =
+            "bold 28px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            "FACE DASH - POP STAR EDITION",
+            canvas.width / 2,
+            canvas.height / 2 - 35
+        );
+
+
+        ctx.font = "18px Arial";
+
+        ctx.fillStyle = "#ffffff";
+
+        ctx.fillText(
+            "Nhấn SPACE hoặc Click chuột để bắt đầu!",
+            canvas.width / 2,
+            canvas.height / 2 + 25
+        );
+
+    }
+
+
+    // ========================================================
+    // 💀 GAME OVER + TROLL FACE
+    // ========================================================
+
+    if (gameState === "GAMEOVER") {
+
+        // Lớp phủ
+
+        ctx.fillStyle =
+            "rgba(0,0,0,0.75)";
+
+        ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        // GAME OVER
+
+        ctx.fillStyle = "#ff0055";
+
+        ctx.font =
+            "bold 54px Arial";
+
+        ctx.textAlign = "center";
+
+        ctx.shadowColor = "#ff0055";
+
+        ctx.shadowBlur = 15;
+
+        ctx.fillText(
+            "GAME OVER",
+            canvas.width / 2,
+            90
+        );
+
+        ctx.shadowBlur = 0;
+
+
+        // ====================================================
+        // 😈 TROLL FACE
+        // ====================================================
+
+        if (trollImg.complete) {
+
+            let trollSize = 220;
+
+            ctx.drawImage(
+                trollImg,
+
+                canvas.width / 2 -
+                trollSize / 2,
+
+                canvas.height * 0.25,
+
+                trollSize,
+
+                trollSize
+            );
+
+        }
+
+
+        // Chữ
+
+        ctx.fillStyle = "#ffffff";
+
+        ctx.font =
+            "bold 18px Arial";
+
+        ctx.fillText(
+            "💀 Bạn đã chết!",
+            canvas.width / 2,
+            canvas.height * 0.78
+        );
+
+
+        ctx.font = "16px Arial";
+
+        ctx.fillText(
+            "Nhấn SPACE hoặc Click để chơi lại",
+            canvas.width / 2,
+            canvas.height * 0.86
+        );
+
+    }
+
+
+    // ========================================================
+    // ========================================================
+    // VICTORY — thiết kế theo ảnh mẫu xanh đen / neon cyan
+    // ========================================================
+    if (gameState === "VICTORY") {
+        const t = performance.now() - winStarted;
+        const gx = canvas.width * 0.62;
+        const gateTop = floorY - 205;
+        const gy = gateTop + 112;
+        const pulse = 0.82 + 0.18 * Math.sin(t / 95);
+        const burstFade = Math.max(0, 1 - t / 1900);
+
+        // Nền chỉ phủ một lớp xanh đen trong suốt, không dùng ảnh nền cũ.
+        ctx.fillStyle = `rgba(2, 7, 25, ${Math.max(0, 0.22 - t / 7000)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Vầng sáng năng lượng cyan phía sau cổng.
+        const halo = ctx.createRadialGradient(gx, gy, 4, gx, gy, 210);
+        halo.addColorStop(0, `rgba(210,255,255,${0.75 * pulse})`);
+        halo.addColorStop(0.18, `rgba(0,245,255,${0.50 * pulse})`);
+        halo.addColorStop(0.55, `rgba(0,125,255,${0.24 * pulse})`);
+        halo.addColorStop(1, "rgba(0,80,255,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(gx - 220, gateTop - 40, 440, 300);
+
+        // Vòng năng lượng tròn nở ra sau khi khối chạm cổng.
+        for (let i = 0; i < 3; i++) {
+            const radius = 48 + ((t * 0.16 + i * 58) % 150);
+            ctx.beginPath();
+            ctx.ellipse(gx, gy, radius * 0.88, radius, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = i === 0 ? "#dfffff" : "#18dfff";
+            ctx.globalAlpha = Math.max(0, (1 - ((radius - 48) / 150))) * burstFade;
+            ctx.lineWidth = i === 0 ? 3 : 2;
+            ctx.shadowColor = "#00eaff";
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        // Tia sáng sắc nhọn tỏa ra từ tâm cổng.
+        ctx.save();
+        ctx.globalAlpha = burstFade * (0.72 + 0.28 * Math.sin(t / 42));
+        for (let i = 0; i < 30; i++) {
+            const a = (Math.PI * 2 * i / 30) + 0.08;
+            const inner = 24 + (i % 4) * 7;
+            const outer = Math.max(canvas.width, canvas.height) * (0.48 + (i % 5) * 0.11);
+            const spread = 0.008 + (i % 3) * 0.009;
+            ctx.beginPath();
+            ctx.moveTo(gx + Math.cos(a) * inner, gy + Math.sin(a) * inner);
+            ctx.lineTo(gx + Math.cos(a - spread) * outer, gy + Math.sin(a - spread) * outer);
+            ctx.lineTo(gx + Math.cos(a + spread) * outer, gy + Math.sin(a + spread) * outer);
+            ctx.closePath();
+            ctx.fillStyle = i % 4 === 0 ? "#ffffff" : (i % 4 === 1 ? "#00eaff" : "#fff176");
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 14;
+            ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        // Lõi sáng trắng tại điểm va chạm, nhanh chóng dịu xuống.
+        const coreAlpha = Math.max(0, 0.95 - t / 1050);
+        const core = ctx.createRadialGradient(gx, gy, 1, gx, gy, 92);
+        core.addColorStop(0, `rgba(255,255,255,${coreAlpha})`);
+        core.addColorStop(0.2, `rgba(210,255,255,${coreAlpha * 0.88})`);
+        core.addColorStop(0.52, `rgba(0,235,255,${coreAlpha * 0.45})`);
+        core.addColorStop(1, "rgba(0,180,255,0)");
+        ctx.fillStyle = core;
+        ctx.fillRect(gx - 100, gy - 100, 200, 200);
+
+        // Vệt cầu vồng cong từ góc trái dưới vào tâm cổng.
+        const trailColors = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
+        ctx.save();
+        ctx.lineCap = "round";
+        for (let i = 0; i < trailColors.length; i++) {
+            const offset = (i - 3) * 4;
+            ctx.beginPath();
+            ctx.moveTo(-25, floorY - 62 + offset);
+            ctx.bezierCurveTo(canvas.width * 0.13, floorY - 155 + offset,
+                              canvas.width * 0.24, floorY - 190 + offset,
+                              gx - 28, gy + 5 + offset * 0.35);
+            ctx.strokeStyle = trailColors[i];
+            ctx.globalAlpha = Math.max(0, 0.78 - t / 3500);
+            ctx.lineWidth = i === 3 ? 7 : 5;
+            ctx.shadowColor = trailColors[i];
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        // Những hạt vuông nhỏ còn sót lại trên vệt cầu vồng.
+        ctx.save();
+        for (const p of victoryTrail) {
+            ctx.globalAlpha = Math.max(0, p.life) * Math.max(0, 1 - t / 4200);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 12;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        }
+        ctx.restore();
+
+        // Hạt vuông vàng/trắng/cyan bắn tung tóe từ cổng.
+        ctx.save();
+        for (const p of victoryBurst) {
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 13;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.restore();
+
+        // Hạt sáng nền rơi nhẹ, màu vàng trắng như ảnh mẫu.
+        ctx.save();
+        for (const p of winParticles) {
+            ctx.globalAlpha = p.alpha * (0.55 + 0.45 * Math.sin(t / 140 + p.rotation));
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 9;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        // LEVEL COMPLETE — một dòng duy nhất, viền pixel xanh lá, phía trên cổng.
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const titleSize = Math.min(55, canvas.width * 0.049);
+        const titleY = canvas.height * 0.30;
+        ctx.font = `900 ${titleSize}px monospace`;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = "#06131b";
+        ctx.shadowColor = "#8cff36";
+        ctx.shadowBlur = 18;
+        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, titleY);
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#3c9e18";
+        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, titleY);
+        ctx.fillStyle = "#83ff35";
+        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, titleY);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#e8ffc7";
+        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, titleY);
+        ctx.restore();
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#e8faff";
+        ctx.font = `bold ${Math.min(18, canvas.width * 0.015)}px monospace`;
+        ctx.shadowColor = "#00dfff";
+        ctx.shadowBlur = 7;
+        ctx.fillText("100%  •  Nhấn SPACE hoặc Click để chơi lại", canvas.width * 0.5, canvas.height * 0.91);
+        ctx.shadowBlur = 0;
+    }
+
+    // Vẽ lại sau cùng để nút MENU luôn nằm trên lớp thắng/thua.
+    if (gameState !== "MENU") drawMenuButton();
+}
+
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+
+function gameLoop(now) {
+    if (!lastFrameTime) lastFrameTime = now;
+    frameScale = Math.min(2, Math.max(0.35, (now - lastFrameTime) / 16.6667));
+    lastFrameTime = now;
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
 </script>
+
 </body>
 </html>
 """
 
-for token, (filename, mime) in ASSETS.items():
-    path = Path(filename)
-    if not path.exists():
-        st.error(f"Thiếu file {filename}. Hãy tải file này lên cùng thư mục với app.py trên GitHub.")
-        st.stop()
-    encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
-    game_html = game_html.replace(token, f"data:{mime};base64,{encoded}")
 
-components.html(game_html, height=790, scrolling=False)
+# ============================================================
+# GẮN FILE VÀO HTML
+# ============================================================
+
+game_html = game_html.replace(
+    "MUSIC_URL_HERE",
+    music_url
+)
+
+game_html = game_html.replace(
+    "DEATH_SOUND_HERE",
+    death_url
+)
+
+game_html = game_html.replace(
+    "VICTORY_SOUND_HERE",
+    victory_url
+)
+
+game_html = game_html.replace(
+    "TROLL_FACE_HERE",
+    troll_url
+)
+
+game_html = game_html.replace(
+    "PLAYER_IMAGE_HERE",
+    player_url
+)
+
+
+# ============================================================
+# CHẠY GAME
+# ============================================================
+
+components.html(
+    game_html,
+    height=760
+)
