@@ -817,7 +817,12 @@ function update() {
     // VICTORY
     // ========================================================
 
-    if (distance >= LEVEL_LENGTH) {
+    // Bắt đầu chiến thắng đúng lúc cổng tiến đến điểm hẹn trên màn hình.
+    // Cổng chạy cùng hệ tọa độ với chướng ngại vật, sau đó đứng yên khi WINNING.
+    const finishTargetX = canvas.width * 0.62;
+    const finishTriggerDistance = LEVEL_LENGTH - (finishTargetX - player.x);
+    if (distance >= finishTriggerDistance) {
+        distance = finishTriggerDistance;
         gameState = "WINNING";
         winningStarted = performance.now();
         startVictoryEffect();
@@ -1192,10 +1197,15 @@ function draw() {
 
 
     // ========================================================
-    // FINISH PORTAL — luôn cố định tại đúng vị trí mà khối vuông lao tới.
-    // Không đổi tọa độ khi chuyển từ PLAYING sang WINNING/VICTORY.
-    const finishX = canvas.width * 0.62;
-    const shouldShowFinish = gameState === "WINNING" || gameState === "VICTORY" || distance >= LEVEL_LENGTH - 850;
+    // FINISH PORTAL: trong lúc chơi, cổng tiến lại gần theo cùng hệ tọa độ
+    // với gai/cột. Khi bắt đầu WINNING/VICTORY, khóa cổng tại điểm hẹn.
+    const finishTargetX = canvas.width * 0.62;
+    const finishX = (gameState === "WINNING" || gameState === "VICTORY")
+        ? finishTargetX
+        : LEVEL_LENGTH - distance + player.x;
+    const shouldShowFinish =
+        gameState === "WINNING" || gameState === "VICTORY" ||
+        (finishX > -120 && finishX < canvas.width + 120);
     if (shouldShowFinish) {
         const gateW = 100;
         const gateH = 205;
