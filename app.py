@@ -414,6 +414,7 @@ function resetGame() {
 
     player.x = 180;
     victoryPlayerX = player.x;
+    player.x = 180;
     player.y = floorY - player.size;
 
     player.vy = 0;
@@ -455,37 +456,50 @@ function resetGame() {
 
 function update() {
 
-    // Giai đoạn kết thúc: khối vuông xoay rồi lao vào bức tường FINISH
+    // Giai đoạn kết thúc: khối vuông tạo một vòng lượn lớn rồi lao vào tường FINISH
     if (gameState === "WINNING") {
         const elapsed = performance.now() - winningStarted;
-        const duration = 1150;
+        const duration = 2100;
         const progress = Math.min(1, elapsed / duration);
-        player.rotation += 0.28;
-        victoryPlayerX = 180 + progress * 330;
-        player.x = victoryPlayerX;
-        player.y = victoryPlayerY - Math.sin(progress * Math.PI) * 42;
+        const startX = 180;
+        const wallX = canvas.width * 0.62;
+        const endX = wallX - player.size * 0.82;
+        const baseY = floorY - player.size;
+        const eased = progress * progress * (3 - 2 * progress);
 
-        if (Math.random() < 0.95) {
+        // Một đường lượn rộng, gần giống nét vòng cung trong ảnh đánh dấu
+        player.x = startX + (endX - startX) * eased + Math.sin(progress * Math.PI * 2) * 82 * (1 - progress * 0.35);
+        player.y = baseY - (1 - Math.cos(progress * Math.PI * 2)) * 88 - Math.sin(progress * Math.PI) * 24;
+        player.rotation += 0.24 + progress * 0.2;
+        victoryPlayerX = player.x;
+
+        // Vệt cầu vồng nhiều màu bám theo khối vuông
+        if (Math.random() < 1) {
             const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
-            victoryTrail.push({
-                x: victoryPlayerX + player.size * 0.25,
-                y: player.y + player.size * (0.3 + Math.random() * 0.4),
-                size: 6 + Math.random() * 9,
-                life: 1,
-                color: rainbow[Math.floor(Math.random() * rainbow.length)]
-            });
+            for (let i = 0; i < 2; i++) {
+                victoryTrail.push({
+                    x: player.x + player.size * 0.2,
+                    y: player.y + player.size * (0.25 + Math.random() * 0.5),
+                    size: 5 + Math.random() * 11,
+                    life: 1,
+                    color: rainbow[Math.floor(Math.random() * rainbow.length)]
+                });
+            }
         }
-        victoryTrail.forEach(p => { p.x -= 2.8; p.life -= 0.025; p.size *= 0.99; });
+        victoryTrail.forEach(p => { p.x -= 1.1; p.life -= 0.018; p.size *= 0.995; });
         victoryTrail = victoryTrail.filter(p => p.life > 0);
+
+        // Các hạt vuông vàng bật ra và rơi dần
         for (const p of victoryBurst) {
-            p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.vx *= 0.992;
-            p.life -= 0.018; p.rotation += p.spin;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.055; p.vx *= 0.992;
+            p.life -= 0.012; p.rotation += p.spin;
         }
         victoryBurst = victoryBurst.filter(p => p.life > 0);
 
         if (progress >= 1) {
-            // Khối vuông biến mất khi chạm tường; sau đó hiện màn chiến thắng
+            // Chạm tường: lóe sáng, khối vuông biến mất hoàn toàn
             player.x = -1000;
+            player.y = -1000;
             gameState = "VICTORY";
             winStarted = performance.now();
             stopMusic();
@@ -844,7 +858,7 @@ function draw() {
     // FINISH WALL: bức tường lớn phát sáng
     // ========================================================
     const finishX = (gameState === "WINNING" || gameState === "VICTORY")
-        ? player.x + 105
+        ? canvas.width * 0.62
         : LEVEL_LENGTH - distance + player.x + 105;
     if (finishX > -100 && finishX < canvas.width + 100) {
         const pulse = 0.78 + 0.22 * Math.sin(performance.now() / 90);
@@ -1213,6 +1227,15 @@ function draw() {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Vệt sáng dọc và ánh lóe ngay thời điểm khối vuông chạm tường
+        const flashAlpha = Math.max(0, 0.55 - t / 900);
+        const flash = ctx.createRadialGradient(canvas.width * 0.62, canvas.height * 0.48, 5, canvas.width * 0.62, canvas.height * 0.48, canvas.width * 0.72);
+        flash.addColorStop(0, `rgba(255,255,230,${flashAlpha})`);
+        flash.addColorStop(0.28, `rgba(255,120,225,${flashAlpha * 0.62})`);
+        flash.addColorStop(1, "rgba(255,80,210,0)");
+        ctx.fillStyle = flash;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         // Tia sáng bung ra quanh màn hình như hiệu ứng thắng trong video
         const burstX = canvas.width * 0.57;
         const burstY = canvas.height * 0.53;
@@ -1258,8 +1281,8 @@ function draw() {
         // Vệt cầu vồng nhiều lớp, nằm phía sau nhân vật
         ctx.save();
         ctx.lineCap = "round";
-        const tx = player.x + player.size / 2;
-        const ty = player.y + player.size / 2;
+        const tx = canvas.width * 0.62;
+        const ty = canvas.height * 0.52;
         const trailColors = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
         for (let i = 0; i < trailColors.length; i++) {
             ctx.beginPath();
