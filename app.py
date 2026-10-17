@@ -160,6 +160,7 @@ let menuDistance = 0;
 let menuCube = { x: 80, y: 0, vy: 0, rotation: 0, grounded: true, nextJump: 0 };
 let menuObstacles = [];
 let menuLastObstacle = 0;
+let mouseHeld = false; // Giữ chuột trái để tự động nhảy liên tục
 
 let speed = 7;
 
@@ -318,7 +319,9 @@ const hardObstacles = [
 
     // Đoạn parkour 3 bậc: độ cao tăng dần, khoảng cách vừa đủ để nhảy từ bậc này sang bậc kế.
     { x: 1580, type: "pillar", width: 92, height: 48 },
+    { x: 1700, type: "spike" }, // Gai dưới khe giữa bậc 1 và bậc 2
     { x: 1780, type: "pillar", width: 92, height: 82 },
+    { x: 1905, type: "spike" }, // Gai dưới khe giữa bậc 2 và bậc 3
     { x: 1980, type: "pillar", width: 100, height: 116 },
 
     // Rời bậc cao rồi nhảy qua thanh ngang thấp trên mặt đường.
@@ -328,6 +331,7 @@ const hardObstacles = [
 
     // Bậc đôi tiếp theo, có khoảng trống để đáp xuống trước cụm gai.
     { x: 3350, type: "pillar", width: 92, height: 58 },
+    { x: 3470, type: "spike" }, // Gai ở khe giữa hai cột xanh
     { x: 3560, type: "pillar", width: 100, height: 98 },
     { x: 3890, type: "spike" }, { x: 3925, type: "spike" },
     { x: 4260, type: "bar", width: 118, height: 42 },
@@ -336,6 +340,7 @@ const hardObstacles = [
 
     // Đoạn cuối khó hơn: nhảy lên cột, xuống đất, rồi vượt chuỗi gai có khoảng cách an toàn.
     { x: 5320, type: "pillar", width: 96, height: 72 },
+    { x: 5445, type: "spike" }, // Gai giữa hai bậc cuối
     { x: 5535, type: "pillar", width: 100, height: 108 },
     { x: 5870, type: "bar", width: 120, height: 40 },
     { x: 6210, type: "spike" }, { x: 6245, type: "spike" },
@@ -477,10 +482,12 @@ window.addEventListener("keydown", function(e) {
 // ============================================================
 
 canvas.addEventListener("mousedown", function(e) {
+    if (e.button !== 0) return;
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * canvas.width / rect.width;
     const y = (e.clientY - rect.top) * canvas.height / rect.height;
     if (gameState !== "MENU" && x >= 18 && x <= 145 && y >= 16 && y <= 62) {
+        mouseHeld = false;
         goToMenu();
         return;
     }
@@ -488,8 +495,13 @@ canvas.addEventListener("mousedown", function(e) {
         handleMenuClick(x, y);
         return;
     }
+    // Nhấn một lần để nhảy; giữ chuột trái để tự động spam nhảy khi vừa chạm đất.
+    mouseHeld = true;
     jump();
 });
+
+window.addEventListener("mouseup", function() { mouseHeld = false; });
+window.addEventListener("blur", function() { mouseHeld = false; });
 
 function goToMenu() {
     stopMusic(); stopVictorySound();
@@ -709,6 +721,12 @@ function update() {
     }
 
     if (gameState !== "PLAYING") return;
+
+    // Khi giữ chuột trái, tự nhảy mỗi khi khối vuông chạm đất hoặc mặt cột.
+    if (mouseHeld && player.isGrounded) {
+        player.vy = player.jumpPower;
+        player.isGrounded = false;
+    }
 
     distance += speed * frameScale;
 
