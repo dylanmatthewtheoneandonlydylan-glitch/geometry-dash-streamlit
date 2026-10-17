@@ -527,9 +527,12 @@ function resetGame() {
     const cfg = difficultyConfig[selectedDifficulty] || difficultyConfig.NORMAL;
     speed = cfg.speed;
     LEVEL_LENGTH = cfg.length;
-    activeObstacles = cfg.obstacles.map(function(obs) {
-        return { x: obs.x, width: obs.width || 35, height: obs.height || 35, type: obs.type };
-    });
+    // Chừa đoạn đường trống cuối màn để cổng Finish không đè lên gai/cột.
+    activeObstacles = cfg.obstacles
+        .filter(function(obs) { return obs.x < LEVEL_LENGTH - 850; })
+        .map(function(obs) {
+            return { x: obs.x, width: obs.width || 35, height: obs.height || 35, type: obs.type };
+        });
 
 }
 
@@ -566,12 +569,31 @@ function update() {
             menuCube.grounded = false;
             menuCube.rotation += 0.12 * frameScale;
         }
-        if (performance.now() - menuLastObstacle > 750 + Math.random() * 800) {
-            menuObstacles.push({ x: canvas.width + 30, type: Math.random() < 0.72 ? "spike" : "block", size: 25 + Math.random() * 18 });
+        // Gai ngẫu nhiên nhưng có khoảng cách đủ rộng để khối tự động nhảy qua.
+        if (performance.now() - menuLastObstacle > 1050 + Math.random() * 750) {
+            const size = 25 + Math.random() * 12;
+            const last = menuObstacles.length ? menuObstacles[menuObstacles.length - 1] : null;
+            if (!last || last.x < canvas.width - 220) {
+                menuObstacles.push({ x: canvas.width + 35, type: "spike", size: size });
+                // Thỉnh thoảng thêm một gai thứ hai, nhưng luôn để khoảng trống sau cụm.
+                if (Math.random() < 0.22) {
+                    menuObstacles.push({ x: canvas.width + 35 + size + 12, type: "spike", size: size });
+                }
+            }
             menuLastObstacle = performance.now();
         }
         menuObstacles.forEach(o => o.x -= 4.0 * frameScale);
-        menuObstacles = menuObstacles.filter(o => o.x > -70);
+        menuObstacles = menuObstacles.filter(o => o.x > -90);
+
+        // Tự nhảy khi gai sắp tới gần; kiểm tra cả gai đơn và cụm gai.
+        const approachingSpike = menuObstacles.some(o =>
+            o.type === "spike" && o.x + o.size > menuCube.x + 32 &&
+            o.x < menuCube.x + 118 && menuCube.grounded
+        );
+        if (approachingSpike && menuCube.grounded) {
+            menuCube.vy = -(10.8 + Math.random() * 0.6);
+            menuCube.grounded = false;
+        }
         return;
     }
 
@@ -1173,11 +1195,12 @@ function draw() {
     // FINISH PORTAL — cổng cyan giống ảnh tham khảo
     // ========================================================
     // Chỉ hiện cổng trong 650 đơn vị đường cuối cùng.
+    // Cổng đứng yên tại một vị trí trên màn hình; chỉ xuất hiện ở đoạn cuối.
     const finishX = (gameState === "WINNING" || gameState === "VICTORY")
         ? canvas.width * 0.62
-        : player.x + (LEVEL_LENGTH - distance);
-    const shouldShowFinish = gameState === "WINNING" || gameState === "VICTORY" || distance >= LEVEL_LENGTH - 650;
-    if (shouldShowFinish && finishX > -150 && finishX < canvas.width + 150) {
+        : canvas.width - 145;
+    const shouldShowFinish = gameState === "WINNING" || gameState === "VICTORY" || distance >= LEVEL_LENGTH - 850;
+    if (shouldShowFinish) {
         const gateW = 100;
         const gateH = 205;
         const gateTop = floorY - gateH;
