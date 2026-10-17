@@ -495,6 +495,27 @@ canvas.addEventListener("mousedown", function(e) {
         handleMenuClick(x, y);
         return;
     }
+    // Màn hình GAME OVER: chỉ hai nút trên màn hình mới nhận thao tác.
+    if (gameState === "GAMEOVER") {
+        const retry = { x: 90, y: 390, w: 470, h: 125 };
+        const continueBtn = { x: 640, y: 390, w: 470, h: 125 };
+        if (x >= retry.x && x <= retry.x + retry.w && y >= retry.y && y <= retry.y + retry.h) {
+            resetGame();
+            gameState = "PLAYING";
+            playMusic();
+            info.innerText = "Độ khó: " + selectedDifficulty + " • Tiến độ: 0%";
+            return;
+        }
+        if (x >= continueBtn.x && x <= continueBtn.x + continueBtn.w && y >= continueBtn.y && y <= continueBtn.y + continueBtn.h) {
+            // 100 ĐÔ là nút minh họa bằng tiền ảo trong game, không trừ tiền thật.
+            resetGame();
+            gameState = "PLAYING";
+            playMusic();
+            info.innerText = "💵 Đã dùng 100 ĐÔ ảo — tiếp tục màn chơi!";
+            return;
+        }
+        return;
+    }
     // Nhấn một lần để nhảy; giữ chuột trái để tự động spam nhảy khi vừa chạm đất.
     mouseHeld = true;
     jump();
@@ -1199,6 +1220,93 @@ function drawMenuButton() {
 // DRAW
 // ============================================================
 
+function drawGameOverScreen() {
+    // Phủ nền đỏ/đen, vẫn giữ lại khung game mờ phía sau.
+    ctx.save();
+    ctx.fillStyle = "rgba(3, 2, 12, 0.91)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const glow = ctx.createRadialGradient(canvas.width / 2, 230, 20, canvas.width / 2, 230, 520);
+    glow.addColorStop(0, "rgba(255, 0, 55, 0.24)");
+    glow.addColorStop(1, "rgba(10, 0, 25, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Viền neon bao quanh màn hình.
+    ctx.strokeStyle = "#ff1c78"; ctx.lineWidth = 4;
+    ctx.shadowColor = "#ff00b7"; ctx.shadowBlur = 20;
+    ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+    ctx.shadowBlur = 0;
+
+    ctx.textAlign = "center";
+    ctx.font = "900 76px monospace";
+    ctx.lineWidth = 9; ctx.strokeStyle = "#250018";
+    ctx.shadowColor = "#ff163d"; ctx.shadowBlur = 22;
+    ctx.strokeText("GAME OVER!", canvas.width / 2, 105);
+    ctx.fillStyle = "#ff233f"; ctx.fillText("GAME OVER!", canvas.width / 2, 105);
+    ctx.shadowBlur = 0;
+
+    // Troll Face ở chính giữa.
+    if (trollImg.complete && trollImg.naturalWidth > 0) {
+        ctx.save();
+        ctx.shadowColor = "#ff1744"; ctx.shadowBlur = 28;
+        ctx.drawImage(trollImg, canvas.width / 2 - 105, 125, 210, 180);
+        ctx.restore();
+    } else {
+        ctx.font = "bold 90px Arial"; ctx.fillStyle = "white";
+        ctx.fillText("TROLL FACE", canvas.width / 2, 220);
+    }
+
+    // Bảng điểm bên trái.
+    ctx.fillStyle = "rgba(15, 5, 28, 0.94)";
+    ctx.strokeStyle = "#b000ff"; ctx.lineWidth = 2;
+    ctx.shadowColor = "#b000ff"; ctx.shadowBlur = 12;
+    ctx.fillRect(48, 170, 230, 110); ctx.strokeRect(48, 170, 230, 110);
+    ctx.shadowBlur = 0;
+    ctx.textAlign = "left"; ctx.font = "bold 18px monospace"; ctx.fillStyle = "#f5eaff";
+    ctx.fillText("ĐIỂM SỐ:", 68, 200);
+    ctx.font = "bold 31px monospace"; ctx.fillStyle = "#ff334f";
+    ctx.fillText(String(Math.floor(distance)), 68, 237);
+    ctx.font = "bold 16px monospace"; ctx.fillStyle = "#bdeaff";
+    ctx.fillText("ĐỘ KHÓ: " + selectedDifficulty, 68, 262);
+
+    // Lời nhắn bên phải.
+    ctx.textAlign = "center"; ctx.font = "italic bold 22px Arial";
+    ctx.fillStyle = "#ff9edb"; ctx.shadowColor = "#ff00c8"; ctx.shadowBlur = 10;
+    ctx.fillText("CỐ LÊN LẦN SAU NHÉ BẠN!", 925, 215);
+    ctx.font = "bold 17px Arial"; ctx.fillStyle = "#ff555f";
+    ctx.fillText("LOL... BẠN ĐÃ ĐÂM VÀO GAI!", 925, 250);
+    ctx.shadowBlur = 0;
+
+    // Nút CHƠI LẠI màu xanh neon.
+    const buttons = [
+        { x: 90, y: 390, w: 470, h: 125, color: "#00dfff", dark: "#0035ff" },
+        { x: 640, y: 390, w: 470, h: 125, color: "#ff38d1", dark: "#71005e" }
+    ];
+    for (const b of buttons) {
+        ctx.save();
+        ctx.shadowColor = b.color; ctx.shadowBlur = 24;
+        const grad = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+        grad.addColorStop(0, b.dark); grad.addColorStop(1, "#100a25");
+        ctx.fillStyle = grad; ctx.strokeStyle = b.color; ctx.lineWidth = 6;
+        ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 2;
+        ctx.strokeRect(b.x + 10, b.y + 10, b.w - 20, b.h - 20);
+        ctx.restore();
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "bold 36px monospace"; ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#00eaff"; ctx.shadowBlur = 12;
+    ctx.fillText("↻  CHƠI LẠI", 325, 452);
+    ctx.shadowColor = "#ff24d4";
+    ctx.fillText("💵 100 ĐÔ", 875, 440);
+    ctx.font = "bold 21px Arial";
+    ctx.fillText("ĐỂ CHƠI TIẾP", 875, 480);
+    ctx.shadowBlur = 0; ctx.textBaseline = "alphabetic";
+    ctx.font = "16px Arial"; ctx.fillStyle = "#d7cfff";
+    ctx.fillText("100 ĐÔ ẢO • KHÔNG DÙNG TIỀN THẬT", canvas.width / 2, 550);
+    ctx.restore();
+}
+
 function draw() {
 
     if (gameState === "MENU") {
@@ -1886,8 +1994,11 @@ function draw() {
         ctx.shadowBlur = 0;
     }
 
-    // Vẽ lại sau cùng để nút MENU luôn nằm trên lớp thắng/thua.
-    if (gameState !== "MENU") drawMenuButton();
+    // Màn hình GAME OVER vẽ đè lên cảnh chơi sau hiệu ứng vỡ.
+    if (gameState === "GAMEOVER") drawGameOverScreen();
+
+    // Vẽ nút MENU ở các trạng thái chơi bình thường; ẩn trên GAME OVER.
+    if (gameState !== "MENU" && gameState !== "GAMEOVER") drawMenuButton();
 }
 
 
