@@ -269,20 +269,20 @@ const levelObstacles = [
     { x: 900, type: "spike" },
     { x: 1200, type: "block" },
 
-    // Khúc nhảy 5-6: nới khoảng cách hai gai để dễ canh nhảy hơn.
+    // Cặp gai 5-6: đặt sát nhau, không còn khe hở.
     { x: 1500, type: "spike" },
-    { x: 1570, type: "spike" },
+    { x: 1535, type: "spike" },
     { x: 1900, type: "block" },
     { x: 2100, type: "spike" },
     { x: 2320, type: "block" },
 
-    // Cụm ba gai cũng được giãn ra để tránh va chạm liên tiếp.
+    // Ba gai nối liền nhau, mỗi gai rộng 35 px.
     { x: 2620, type: "spike" },
-    { x: 2685, type: "spike" },
-    { x: 2750, type: "spike" },
+    { x: 2655, type: "spike" },
+    { x: 2690, type: "spike" },
     { x: 3050, type: "block" },
     { x: 3270, type: "spike" },
-    { x: 3340, type: "spike" }
+    { x: 3305, type: "spike" }
 ];
 
 
