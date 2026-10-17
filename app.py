@@ -24,6 +24,9 @@ with open("vine-boom.mp3", "rb") as f:
 with open("trollface.png", "rb") as f:
     troll_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
+with open("player.png", "rb") as f:
+    player_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
 
 # ============================================================
 # GAME
@@ -116,8 +119,7 @@ deathSound.volume = 0.8;
 
 const playerImg = new Image();
 
-playerImg.src =
-    "https://i.imgur.com/8Q8S4wD.png";
+playerImg.src = "PLAYER_IMAGE_HERE";
 
 
 // ============================================================
@@ -1066,6 +1068,11 @@ game_html = game_html.replace(
 game_html = game_html.replace(
     "TROLL_FACE_HERE",
     troll_url
+)
+
+game_html = game_html.replace(
+    "PLAYER_IMAGE_HERE",
+    player_url
 )
 
 
