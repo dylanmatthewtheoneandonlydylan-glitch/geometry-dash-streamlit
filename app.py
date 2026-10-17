@@ -1192,13 +1192,9 @@ function draw() {
 
 
     // ========================================================
-    // FINISH PORTAL — cổng cyan giống ảnh tham khảo
-    // ========================================================
-    // Chỉ hiện cổng trong 650 đơn vị đường cuối cùng.
-    // Cổng đứng yên tại một vị trí trên màn hình; chỉ xuất hiện ở đoạn cuối.
-    const finishX = (gameState === "WINNING" || gameState === "VICTORY")
-        ? canvas.width * 0.62
-        : canvas.width - 145;
+    // FINISH PORTAL — luôn cố định tại đúng vị trí mà khối vuông lao tới.
+    // Không đổi tọa độ khi chuyển từ PLAYING sang WINNING/VICTORY.
+    const finishX = canvas.width * 0.62;
     const shouldShowFinish = gameState === "WINNING" || gameState === "VICTORY" || distance >= LEVEL_LENGTH - 850;
     if (shouldShowFinish) {
         const gateW = 100;
