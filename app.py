@@ -275,32 +275,64 @@ const player = {
 
 const floorY = 500;
 
-const LEVEL_LENGTH = 5000;
+let LEVEL_LENGTH = 5000;
 
 
 // ============================================================
 // OBSTACLES
 // ============================================================
 
+// EASY giữ nguyên bản đồ cũ. NORMAL/HARD có bản đồ riêng,
+// khoảng cách đã được bố trí để có thể nhảy qua hợp lý.
 const levelObstacles = [
     { x: 600, type: "spike" },
     { x: 900, type: "spike" },
     { x: 1200, type: "block" },
-
-    // Cặp gai 5-6: đặt sát nhau, không còn khe hở.
     { x: 1500, type: "spike" },
     { x: 1535, type: "spike" },
     { x: 1900, type: "block" },
     { x: 2100, type: "spike" },
     { x: 2320, type: "block" },
-
-    // Ba gai nối liền nhau, mỗi gai rộng 35 px.
     { x: 2620, type: "spike" },
     { x: 2655, type: "spike" },
     { x: 2690, type: "spike" },
     { x: 3050, type: "block" },
     { x: 3270, type: "spike" },
     { x: 3305, type: "spike" }
+];
+
+const normalObstacles = levelObstacles.concat([
+    { x: 3650, type: "spike" }, { x: 3685, type: "spike" },
+    { x: 4020, type: "block" }, { x: 4330, type: "spike" },
+    { x: 4365, type: "spike" }, { x: 4700, type: "block" },
+    { x: 5020, type: "spike" }, { x: 5055, type: "spike" },
+    { x: 5400, type: "block" }, { x: 5730, type: "spike" },
+    { x: 5765, type: "spike" }, { x: 6100, type: "block" }
+]);
+
+const hardObstacles = [
+    { x: 600, type: "spike" },
+    { x: 900, type: "spike" }, { x: 935, type: "spike" },
+    { x: 1250, type: "block" },
+    { x: 1580, type: "pillar", width: 76, height: 105 },
+    { x: 1850, type: "spike" }, { x: 1885, type: "spike" },
+    { x: 2200, type: "block" },
+    { x: 2520, type: "spike" }, { x: 2555, type: "spike" },
+    { x: 2860, type: "pillar", width: 76, height: 105 },
+    { x: 3130, type: "spike" }, { x: 3165, type: "spike" },
+    { x: 3500, type: "block" },
+    { x: 3820, type: "spike" }, { x: 3855, type: "spike" },
+    { x: 4160, type: "pillar", width: 76, height: 105 },
+    { x: 4430, type: "spike" }, { x: 4465, type: "spike" },
+    { x: 4800, type: "block" },
+    { x: 5120, type: "spike" }, { x: 5155, type: "spike" },
+    { x: 5480, type: "pillar", width: 76, height: 105 },
+    { x: 5750, type: "spike" }, { x: 5785, type: "spike" },
+    { x: 6120, type: "block" },
+    { x: 6440, type: "spike" }, { x: 6475, type: "spike" },
+    { x: 6800, type: "pillar", width: 76, height: 105 },
+    { x: 7070, type: "spike" }, { x: 7105, type: "spike" },
+    { x: 7440, type: "block" }
 ];
 
 
@@ -488,14 +520,15 @@ function resetGame() {
     screenShake = 0;
 
     const difficultyConfig = {
-        EASY:   { speed: 6.0, obstacleLimit: 7 },
-        NORMAL: { speed: 7.0, obstacleLimit: levelObstacles.length },
-        HARD:   { speed: 8.4, obstacleLimit: levelObstacles.length }
+        EASY:   { speed: 6.0, length: 5000, obstacles: levelObstacles.slice(0, 7) },
+        NORMAL: { speed: 7.0, length: 6500, obstacles: normalObstacles },
+        HARD:   { speed: 7.4, length: 7900, obstacles: hardObstacles }
     };
     const cfg = difficultyConfig[selectedDifficulty] || difficultyConfig.NORMAL;
     speed = cfg.speed;
-    activeObstacles = levelObstacles.slice(0, cfg.obstacleLimit).map(function(obs) {
-        return { x: obs.x, width: 35, height: 35, type: obs.type };
+    LEVEL_LENGTH = cfg.length;
+    activeObstacles = cfg.obstacles.map(function(obs) {
+        return { x: obs.x, width: obs.width || 35, height: obs.height || 35, type: obs.type };
     });
 
 }
@@ -659,15 +692,30 @@ function update() {
 
 
     // Gravity
-
+    const previousY = player.y;
     player.vy += player.gravity * frameScale;
-
     player.y += player.vy * frameScale;
 
+    // Pillars act as platforms: the cube can land on their top surface.
+    let landedOnPillar = false;
+    for (const obs of activeObstacles) {
+        if (obs.type !== "pillar") continue;
+        const pillarX = obs.x - distance + player.x;
+        const pillarTop = floorY - obs.height;
+        const overlapsX = player.x + player.size - 5 > pillarX && player.x + 5 < pillarX + obs.width;
+        const wasAbove = previousY + player.size <= pillarTop + 8;
+        const crossedTop = player.y + player.size >= pillarTop;
+        if (overlapsX && wasAbove && crossedTop && player.vy >= 0) {
+            player.y = pillarTop - player.size;
+            player.vy = 0;
+            player.isGrounded = true;
+            landedOnPillar = true;
+            break;
+        }
+    }
 
     // Ground
-
-    if (player.y + player.size >= floorY) {
+    if (!landedOnPillar && player.y + player.size >= floorY) {
 
         player.y =
             floorY - player.size;
@@ -697,12 +745,11 @@ function update() {
 
     for (let obs of activeObstacles) {
 
-        let currentX =
-            obs.x -
-            distance +
-            player.x;
-
+        let currentX = obs.x - distance + player.x;
         let hitMargin = 6;
+
+        // Ne pas considérer la surface d'une colonne comme une collision mortelle.
+        if (obs.type === "pillar" && player.y + player.size <= floorY - obs.height + 3) continue;
 
 
         if (
@@ -1258,13 +1305,12 @@ function draw() {
             }
 
 
-            // BLOCK
+            // BLOCK / PILLAR
 
             else {
 
-                ctx.fillStyle = "#ff9900";
-
-                ctx.shadowColor = "#ff9900";
+                ctx.fillStyle = obs.type === "pillar" ? "#00d9ff" : "#ff9900";
+                ctx.shadowColor = obs.type === "pillar" ? "#00d9ff" : "#ff9900";
 
                 ctx.shadowBlur = 10;
 
