@@ -1213,6 +1213,28 @@ function draw() {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Tia sáng bung ra quanh màn hình như hiệu ứng thắng trong video
+        const burstX = canvas.width * 0.57;
+        const burstY = canvas.height * 0.53;
+        const burstFade = Math.max(0, 1 - t / 1900);
+        ctx.save();
+        ctx.globalAlpha = burstFade * (0.5 + 0.5 * Math.sin(t / 45));
+        for (let i = 0; i < 18; i++) {
+            const a = (Math.PI * 2 * i / 18) + 0.12;
+            const reach = Math.max(canvas.width, canvas.height) * 1.15;
+            const spread = 0.045 + (i % 3) * 0.018;
+            ctx.beginPath();
+            ctx.moveTo(burstX, burstY);
+            ctx.lineTo(burstX + Math.cos(a - spread) * reach, burstY + Math.sin(a - spread) * reach);
+            ctx.lineTo(burstX + Math.cos(a + spread) * reach, burstY + Math.sin(a + spread) * reach);
+            ctx.closePath();
+            ctx.fillStyle = i % 3 === 0 ? "#fff6a8" : (i % 3 === 1 ? "#ffffff" : "#ff9fe9");
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 16;
+            ctx.fill();
+        }
+        ctx.restore();
+
         // Các khối hình học mờ phía sau
         ctx.save();
         ctx.globalAlpha = 0.18;
@@ -1293,17 +1315,52 @@ function draw() {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // Thông báo chiến thắng gọn ở phía dưới để không che hiệu ứng
-        ctx.textAlign = "center";
-        ctx.shadowColor = "#ff3bd4";
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = "#ffffff";
-        ctx.font = `900 ${Math.min(48, canvas.width * 0.04)}px Arial`;
-        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.83);
+        // Banner mở khóa icon ở phía trên giống video mẫu
+        const bannerW = Math.min(390, canvas.width * 0.48);
+        const bannerH = 48;
+        const bannerX = (canvas.width - bannerW) / 2;
+        const bannerY = 28;
+        ctx.save();
+        ctx.fillStyle = "#7a3e20";
+        ctx.strokeStyle = "#f8d59b";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#000000";
+        ctx.shadowBlur = 8;
+        ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+        ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff6a8";
-        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px Arial`;
-        ctx.fillText("100%  •  Nhấn SPACE hoặc Click để chơi lại", canvas.width * 0.5, canvas.height * 0.90);
+        ctx.fillStyle = "#fff4dc";
+        ctx.textAlign = "center";
+        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px monospace`;
+        ctx.fillText("▣  STEREO MADNESS!", canvas.width / 2, bannerY + 19);
+        ctx.font = `bold ${Math.min(14, canvas.width * 0.012)}px monospace`;
+        ctx.fillText("Unlocked new icon!", canvas.width / 2, bannerY + 37);
+        ctx.restore();
+
+        // Chữ LEVEL COMPLETE xanh lá kiểu pixel game
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.font = `900 ${Math.min(58, canvas.width * 0.052)}px monospace`;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = "#164b17";
+        ctx.shadowColor = "#83ff35";
+        ctx.shadowBlur = 18;
+        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
+        ctx.fillStyle = "#7cff35";
+        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#d6ff9d";
+        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
+        ctx.restore();
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px monospace`;
+        ctx.shadowColor = "#000000";
+        ctx.shadowBlur = 5;
+        ctx.fillText("100%  •  Nhấn SPACE hoặc Click để chơi lại", canvas.width * 0.5, canvas.height * 0.88);
+        ctx.shadowBlur = 0;
     }
 
 }
