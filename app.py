@@ -873,7 +873,68 @@ function update() {
 // ============================================================
 
 function drawBackground() {
-    // Nền xanh đen kiểu Geometry Dash — không còn phủ nền tím.
+    // Mỗi cấp độ có một bản đồ và bảng màu riêng.
+    if (selectedDifficulty === "NORMAL") {
+        // CẤP 2: HANG NÚI LỬA — dung nham đỏ cam và vách đá tối.
+        const lavaGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        lavaGrad.addColorStop(0, "#190509");
+        lavaGrad.addColorStop(0.58, "#45100b");
+        lavaGrad.addColorStop(1, "#080407");
+        ctx.fillStyle = lavaGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 30; i++) {
+            const w = 24 + (i % 4) * 13;
+            const h = 38 + ((i * 31) % 100);
+            const x = ((i * 57 - distance * 0.22 + 7000) % (canvas.width + 70) + canvas.width + 70) % (canvas.width + 70) - 35;
+            ctx.fillStyle = i % 2 ? "#32100f" : "#240a0b";
+            ctx.fillRect(x, floorY - h, w, h);
+            ctx.fillStyle = i % 3 ? "#ff5a1f" : "#ffd34d";
+            ctx.globalAlpha = 0.45 + 0.35 * Math.abs(Math.sin(performance.now() / 300 + i));
+            ctx.fillRect(x + 4, floorY - h + 12, 4, Math.max(8, h - 20));
+            ctx.globalAlpha = 1;
+        }
+        // Những dòng dung nham phát sáng phía dưới đường chạy.
+        ctx.fillStyle = "#f04412";
+        ctx.globalAlpha = 0.45;
+        ctx.fillRect(0, floorY + 8, canvas.width, 5);
+        for (let i = 0; i < 12; i++) {
+            const x = ((i * 93 - distance * 0.7) % (canvas.width + 60) + canvas.width + 60) % (canvas.width + 60) - 30;
+            ctx.fillStyle = i % 2 ? "#ffb52e" : "#ff4018";
+            ctx.fillRect(x, floorY + 15 + (i % 3) * 8, 25 + (i % 4) * 10, 3);
+        }
+        ctx.globalAlpha = 1;
+        return;
+    }
+    if (selectedDifficulty === "HARD") {
+        // CẤP 3: KHÔNG GIAN CYBER — lưới điện tử xanh tím neon.
+        const cyberGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        cyberGrad.addColorStop(0, "#08051f");
+        cyberGrad.addColorStop(0.6, "#171044");
+        cyberGrad.addColorStop(1, "#030613");
+        ctx.fillStyle = cyberGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 65; i++) {
+            const x = ((i * 149 - distance * (0.12 + (i % 3) * 0.04) + 9000) % canvas.width + canvas.width) % canvas.width;
+            const y = (i * 43 + 17) % 300;
+            ctx.globalAlpha = 0.35 + 0.55 * Math.abs(Math.sin(performance.now() / 420 + i));
+            ctx.fillStyle = i % 2 ? "#19f5ff" : "#ff39df";
+            ctx.fillRect(x, y, i % 5 === 0 ? 4 : 2, i % 5 === 0 ? 4 : 2);
+        }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#19dfff";
+        ctx.globalAlpha = 0.28;
+        ctx.lineWidth = 1;
+        const gridOffset = (distance * 0.35) % 48;
+        for (let x = -48; x < canvas.width + 48; x += 48) {
+            ctx.beginPath(); ctx.moveTo(x - gridOffset, 0); ctx.lineTo(x - gridOffset, floorY); ctx.stroke();
+        }
+        for (let y = 32; y < floorY; y += 32) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        return;
+    }
+    // CẤP 1: GIỮ NGUYÊN MAP THÀNH PHỐ.
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
     grad.addColorStop(0, "#020719");
     grad.addColorStop(0.55, "#07143b");
@@ -1161,9 +1222,10 @@ function draw() {
     // FLOOR
     // ========================================================
 
-    ctx.fillStyle = "#e5fbff";
+    const floorLineColor = selectedDifficulty === "NORMAL" ? "#ff8a35" : (selectedDifficulty === "HARD" ? "#28f5ff" : "#e5fbff");
+    ctx.fillStyle = floorLineColor;
 
-    ctx.shadowColor = "#00e5ff";
+    ctx.shadowColor = floorLineColor;
 
     ctx.shadowBlur = 18;
 
@@ -1177,8 +1239,16 @@ function draw() {
     ctx.shadowBlur = 0;
 
     const floorGrad = ctx.createLinearGradient(0, floorY, 0, canvas.height);
-    floorGrad.addColorStop(0, "#10163d");
-    floorGrad.addColorStop(1, "#050817");
+    if (selectedDifficulty === "NORMAL") {
+        floorGrad.addColorStop(0, "#43130e");
+        floorGrad.addColorStop(1, "#100506");
+    } else if (selectedDifficulty === "HARD") {
+        floorGrad.addColorStop(0, "#171044");
+        floorGrad.addColorStop(1, "#050414");
+    } else {
+        floorGrad.addColorStop(0, "#10163d");
+        floorGrad.addColorStop(1, "#050817");
+    }
     ctx.fillStyle = floorGrad;
 
     ctx.fillRect(
@@ -1320,9 +1390,10 @@ function draw() {
 
             if (obs.type === "spike") {
 
-                ctx.fillStyle = "#ff245f";
+                const spikeColor = selectedDifficulty === "NORMAL" ? "#ff6a1a" : (selectedDifficulty === "HARD" ? "#ff39df" : "#ff245f");
+                ctx.fillStyle = spikeColor;
 
-                ctx.shadowColor = "#ff1744";
+                ctx.shadowColor = spikeColor;
 
                 ctx.shadowBlur = 16;
 
@@ -1366,8 +1437,9 @@ function draw() {
                 const isPillar = obs.type === "pillar";
                 const isBar = obs.type === "bar";
                 const obstacleY = floorY - obs.height;
-                ctx.fillStyle = isPillar ? "#00d9ff" : (isBar ? "#ff3bd4" : "#ff9900");
-                ctx.shadowColor = isPillar ? "#00d9ff" : (isBar ? "#ff3bd4" : "#ff9900");
+                const pillarColor = selectedDifficulty === "NORMAL" ? "#ff6a1a" : "#00d9ff";
+                ctx.fillStyle = isPillar ? pillarColor : (isBar ? "#ff3bd4" : "#ff9900");
+                ctx.shadowColor = isPillar ? pillarColor : (isBar ? "#ff3bd4" : "#ff9900");
                 ctx.shadowBlur = isBar ? 14 : 10;
                 ctx.fillRect(currentX, obstacleY, obs.width, obs.height);
                 if (isBar) {
