@@ -151,11 +151,6 @@ let distance = 0;
 let deathStarted = 0;
 let particles = [];
 let winParticles = [];
-let victoryTrail = [];
-let victoryBurst = [];
-let victoryPlayerY = 0;
-let victoryPlayerX = 0;
-let winningStarted = 0;
 let winStarted = 0;
 let screenShake = 0;
 
@@ -186,41 +181,17 @@ function startDeathEffect(cx, cy) {
 function startVictoryEffect() {
     winStarted = performance.now();
     winParticles = [];
-    victoryTrail = [];
-    victoryBurst = [];
-    victoryPlayerY = player.y;
-    victoryPlayerX = player.x;
-    const colors = ["#fff176", "#ffe95b", "#ffffff", "#ffef9a"];
-
-    // Các ô vuông vàng bắn tung tóe quanh nhân vật giống Geometry Dash
-    for (let i = 0; i < 105; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const power = 1.2 + Math.random() * 6.2;
-        victoryBurst.push({
-            x: player.x + player.size / 2,
-            y: player.y + player.size / 2,
-            vx: Math.cos(angle) * power,
-            vy: Math.sin(angle) * power - 1.5,
-            size: 2 + Math.random() * 7,
-            life: 0.7 + Math.random() * 0.6,
-            rotation: Math.random() * Math.PI,
-            spin: (Math.random() - 0.5) * 0.16,
-            color: colors[Math.floor(Math.random() * colors.length)]
-        });
-    }
-
-    // Một ít hạt vuông rơi xuyên suốt hiệu ứng
-    for (let i = 0; i < 95; i++) {
+    const colors = ["#00f5ff", "#fff176", "#ff4fd8", "#ffffff", "#7cff6b", "#ff9f43"];
+    for (let i = 0; i < 150; i++) {
         winParticles.push({
             x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            vx: (Math.random() - 0.5) * 1.8,
-            vy: 0.5 + Math.random() * 2.6,
-            size: 2 + Math.random() * 6,
+            y: -Math.random() * canvas.height * 0.8,
+            vx: (Math.random() - 0.5) * 3.5,
+            vy: 1.5 + Math.random() * 4.5,
+            size: 4 + Math.random() * 8,
             rotation: Math.random() * Math.PI,
-            spin: (Math.random() - 0.5) * 0.12,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            alpha: 0.45 + Math.random() * 0.55
+            spin: (Math.random() - 0.5) * 0.18,
+            color: colors[Math.floor(Math.random() * colors.length)]
         });
     }
 }
@@ -412,9 +383,6 @@ canvas.addEventListener("mousedown", function() {
 
 function resetGame() {
 
-    player.x = 180;
-    victoryPlayerX = player.x;
-    player.x = 180;
     player.y = floorY - player.size;
 
     player.vy = 0;
@@ -426,8 +394,6 @@ function resetGame() {
     distance = 0;
     particles = [];
     winParticles = [];
-    victoryTrail = [];
-    victoryBurst = [];
     screenShake = 0;
 
     activeObstacles =
@@ -456,93 +422,15 @@ function resetGame() {
 
 function update() {
 
-    // Giai đoạn kết thúc: khối vuông tạo một vòng lượn lớn rồi lao vào tường FINISH
-    if (gameState === "WINNING") {
-        const elapsed = performance.now() - winningStarted;
-        const duration = 2100;
-        const progress = Math.min(1, elapsed / duration);
-        const startX = 180;
-        const wallX = canvas.width * 0.62;
-        const endX = wallX - player.size * 0.82;
-        const baseY = floorY - player.size;
-        const eased = progress * progress * (3 - 2 * progress);
-
-        // Một đường lượn rộng, gần giống nét vòng cung trong ảnh đánh dấu
-        player.x = startX + (endX - startX) * eased + Math.sin(progress * Math.PI * 2) * 82 * (1 - progress * 0.35);
-        player.y = baseY - (1 - Math.cos(progress * Math.PI * 2)) * 88 - Math.sin(progress * Math.PI) * 24;
-        player.rotation += 0.24 + progress * 0.2;
-        victoryPlayerX = player.x;
-
-        // Vệt cầu vồng nhiều màu bám theo khối vuông
-        if (Math.random() < 1) {
-            const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
-            for (let i = 0; i < 2; i++) {
-                victoryTrail.push({
-                    x: player.x + player.size * 0.2,
-                    y: player.y + player.size * (0.25 + Math.random() * 0.5),
-                    size: 5 + Math.random() * 11,
-                    life: 1,
-                    color: rainbow[Math.floor(Math.random() * rainbow.length)]
-                });
-            }
-        }
-        victoryTrail.forEach(p => { p.x -= 1.1; p.life -= 0.018; p.size *= 0.995; });
-        victoryTrail = victoryTrail.filter(p => p.life > 0);
-
-        // Các hạt vuông vàng bật ra và rơi dần
-        for (const p of victoryBurst) {
-            p.x += p.vx; p.y += p.vy; p.vy += 0.055; p.vx *= 0.992;
-            p.life -= 0.012; p.rotation += p.spin;
-        }
-        victoryBurst = victoryBurst.filter(p => p.life > 0);
-
-        if (progress >= 1) {
-            // Chạm tường: lóe sáng, khối vuông biến mất hoàn toàn
-            player.x = -1000;
-            player.y = -1000;
-            gameState = "VICTORY";
-            winStarted = performance.now();
-            stopMusic();
-            info.innerText = "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
-        }
-        return;
-    }
-
     if (gameState === "VICTORY") {
-        const t = performance.now() - winStarted;
-
-        // Khối vuông bay lên nhẹ và xoay liên tục
-        player.y = victoryPlayerY - Math.min(105, t * 0.055) + Math.sin(t / 115) * 8;
-        player.rotation += 0.105;
-
-        // Tạo vệt cầu vồng phía sau khối vuông
-        if (Math.random() < 0.92) {
-            const rainbow = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
-            victoryTrail.push({
-                x: player.x + player.size * 0.28 + Math.random() * 8,
-                y: player.y + player.size * (0.35 + Math.random() * 0.3),
-                size: 7 + Math.random() * 10,
-                life: 1,
-                color: rainbow[Math.floor(Math.random() * rainbow.length)]
-            });
-        }
-        victoryTrail.forEach(p => { p.x -= 2.2; p.life -= 0.025; p.size *= 0.992; });
-        victoryTrail = victoryTrail.filter(p => p.life > 0);
-
-        for (const p of victoryBurst) {
-            p.x += p.vx; p.y += p.vy;
-            p.vy += 0.035; p.vx *= 0.992;
-            p.life -= 0.009; p.rotation += p.spin;
-        }
-        victoryBurst = victoryBurst.filter(p => p.life > 0);
-
         for (const p of winParticles) {
-            p.x += p.vx; p.y += p.vy; p.rotation += p.spin;
-            if (p.y > canvas.height + 12) {
-                p.y = -10; p.x = Math.random() * canvas.width;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rotation += p.spin;
+            if (p.y > canvas.height + 20) {
+                p.y = -10;
+                p.x = Math.random() * canvas.width;
             }
-            if (p.x < -10) p.x = canvas.width + 10;
-            if (p.x > canvas.width + 10) p.x = -10;
         }
         return;
     }
@@ -668,11 +556,15 @@ function update() {
     // ========================================================
 
     if (distance >= LEVEL_LENGTH) {
-        gameState = "WINNING";
-        winningStarted = performance.now();
+
+        gameState = "VICTORY";
         startVictoryEffect();
-        victoryPlayerX = player.x;
-        info.innerText = "✨ ĐANG LAO VÀO TƯỜNG FINISH!";
+
+        stopMusic();
+
+        info.innerText =
+            "🎉 XUẤT SẮC! BẠN ĐÃ HOÀN THÀNH 100%!";
+
     }
     else if (gameState === "PLAYING") {
 
@@ -855,45 +747,48 @@ function draw() {
 
 
     // ========================================================
-    // FINISH WALL: bức tường lớn phát sáng
+    // FINISH
     // ========================================================
-    const finishX = (gameState === "WINNING" || gameState === "VICTORY")
-        ? canvas.width * 0.62
-        : LEVEL_LENGTH - distance + player.x + 105;
-    if (finishX > -100 && finishX < canvas.width + 100) {
-        const pulse = 0.78 + 0.22 * Math.sin(performance.now() / 90);
-        const wallW = 28;
-        const wallGrad = ctx.createLinearGradient(finishX - wallW, 0, finishX + wallW, 0);
-        wallGrad.addColorStop(0, "rgba(255,40,190,0.08)");
-        wallGrad.addColorStop(0.28, "rgba(255,60,210,0.7)");
-        wallGrad.addColorStop(0.5, "rgba(255,255,255,0.98)");
-        wallGrad.addColorStop(0.72, "rgba(255,60,210,0.75)");
-        wallGrad.addColorStop(1, "rgba(255,40,190,0.08)");
+
+    // CỔNG KẾT THÚC kiểu Geometry Dash: khung neon + lõi năng lượng
+    const finishX = LEVEL_LENGTH - distance + player.x;
+    if (finishX > -140 && finishX < canvas.width + 180) {
+        const gateW = 82;
+        const gateH = 190;
+        const gateTop = floorY - gateH;
+        const pulse = 0.72 + 0.28 * Math.sin(performance.now() / 130);
+
         ctx.save();
         ctx.globalAlpha = pulse;
-        ctx.fillStyle = wallGrad;
-        ctx.shadowColor = "#ff42d6";
-        ctx.shadowBlur = 35;
-        ctx.fillRect(finishX - wallW / 2, 0, wallW, floorY + 4);
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 3;
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 30;
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 9;
         ctx.beginPath();
-        ctx.moveTo(finishX, 0);
-        ctx.lineTo(finishX, floorY + 4);
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 34);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 34);
+        ctx.lineTo(finishX + gateW / 2, floorY);
         ctx.stroke();
-        // Các ô vuông nhỏ chạy dọc bức tường
-        for (let y = 18; y < floorY - 5; y += 27) {
-            ctx.fillStyle = (Math.floor(y / 27) % 2 === 0) ? "#fff176" : "#ffffff";
-            ctx.shadowColor = "#fff176";
-            ctx.shadowBlur = 10;
-            ctx.fillRect(finishX - 3, y, 6, 6);
-        }
+
+        const portalGrad = ctx.createLinearGradient(finishX - gateW / 2, 0, finishX + gateW / 2, 0);
+        portalGrad.addColorStop(0, "rgba(0,245,255,0.05)");
+        portalGrad.addColorStop(0.5, "rgba(120,70,255,0.55)");
+        portalGrad.addColorStop(1, "rgba(255,65,210,0.08)");
+        ctx.fillStyle = portalGrad;
+        ctx.fillRect(finishX - gateW / 2 + 5, gateTop + 8, gateW - 10, gateH - 8);
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(finishX, gateTop + gateH * 0.48, 22 + 4 * pulse, 53 + 4 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 22px Arial";
+        ctx.font = "bold 20px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("FINISH", finishX, 36);
+        ctx.fillText("FINISH", finishX, gateTop - 18);
         ctx.restore();
     }
 
@@ -1022,7 +917,7 @@ function draw() {
     // PLAYER
     // ========================================================
 
-    if (gameState !== "DYING" && gameState !== "GAMEOVER" && gameState !== "VICTORY") {
+    if (gameState !== "DYING" && gameState !== "GAMEOVER") {
     ctx.save();
 
     ctx.translate(
@@ -1214,176 +1109,57 @@ function draw() {
 
 
     // ========================================================
-    // 🏆 VICTORY: khối vuông bay, vệt cầu vồng và hạt vàng
+    // 🏆 VICTORY: pháo giấy, ánh sáng và lời chúc mừng
     // ========================================================
     if (gameState === "VICTORY") {
         const t = performance.now() - winStarted;
-
-        // Nền hồng tím kiểu Geometry Dash
-        const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bg.addColorStop(0, "#8d075f");
-        bg.addColorStop(0.48, "#d80b9c");
-        bg.addColorStop(1, "#ff20b4");
-        ctx.fillStyle = bg;
+        const flash = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t / 120));
+        ctx.fillStyle = `rgba(5, 8, 35, ${0.72 + flash})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Vệt sáng dọc và ánh lóe ngay thời điểm khối vuông chạm tường
-        const flashAlpha = Math.max(0, 0.55 - t / 900);
-        const flash = ctx.createRadialGradient(canvas.width * 0.62, canvas.height * 0.48, 5, canvas.width * 0.62, canvas.height * 0.48, canvas.width * 0.72);
-        flash.addColorStop(0, `rgba(255,255,230,${flashAlpha})`);
-        flash.addColorStop(0.28, `rgba(255,120,225,${flashAlpha * 0.62})`);
-        flash.addColorStop(1, "rgba(255,80,210,0)");
-        ctx.fillStyle = flash;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Tia sáng bung ra quanh màn hình như hiệu ứng thắng trong video
-        const burstX = canvas.width * 0.57;
-        const burstY = canvas.height * 0.53;
-        const burstFade = Math.max(0, 1 - t / 1900);
-        ctx.save();
-        ctx.globalAlpha = burstFade * (0.5 + 0.5 * Math.sin(t / 45));
-        for (let i = 0; i < 18; i++) {
-            const a = (Math.PI * 2 * i / 18) + 0.12;
-            const reach = Math.max(canvas.width, canvas.height) * 1.15;
-            const spread = 0.045 + (i % 3) * 0.018;
-            ctx.beginPath();
-            ctx.moveTo(burstX, burstY);
-            ctx.lineTo(burstX + Math.cos(a - spread) * reach, burstY + Math.sin(a - spread) * reach);
-            ctx.lineTo(burstX + Math.cos(a + spread) * reach, burstY + Math.sin(a + spread) * reach);
-            ctx.closePath();
-            ctx.fillStyle = i % 3 === 0 ? "#fff6a8" : (i % 3 === 1 ? "#ffffff" : "#ff9fe9");
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 16;
-            ctx.fill();
-        }
-        ctx.restore();
-
-        // Các khối hình học mờ phía sau
-        ctx.save();
-        ctx.globalAlpha = 0.18;
-        ctx.strokeStyle = "#ff82e5";
-        ctx.lineWidth = 10;
-        for (let i = 0; i < 7; i++) {
-            const x = ((i * 205 - t * 0.035) % (canvas.width + 230) + canvas.width + 230) % (canvas.width + 230) - 115;
-            ctx.strokeRect(x, 35 + (i % 3) * 125, 135, 100);
-        }
-        ctx.restore();
-
-        // Ánh sáng trắng hồng rực ở cạnh phải
-        const glowX = canvas.width * 0.88;
-        const glow = ctx.createLinearGradient(glowX - 45, 0, glowX + 40, 0);
-        glow.addColorStop(0, "rgba(255,255,255,0)");
-        glow.addColorStop(0.55, "rgba(255,255,220,0.9)");
-        glow.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = glow;
-        ctx.fillRect(glowX - 45, 0, 85, canvas.height);
-
-        // Vệt cầu vồng nhiều lớp, nằm phía sau nhân vật
-        ctx.save();
-        ctx.lineCap = "round";
-        const tx = canvas.width * 0.62;
-        const ty = canvas.height * 0.52;
-        const trailColors = ["#ff3b9d", "#ff8a35", "#ffe84a", "#58ff85", "#43e8ff", "#6875ff", "#d66bff"];
-        for (let i = 0; i < trailColors.length; i++) {
-            ctx.beginPath();
-            ctx.moveTo(tx - 4, ty + (i - 3) * 3);
-            ctx.bezierCurveTo(tx - 65, ty - 22 + (i - 3) * 5, tx - 120, ty + 28 + (i - 3) * 5, tx - 205, ty + 8 + (i - 3) * 5);
-            ctx.strokeStyle = trailColors[i];
-            ctx.globalAlpha = 0.72;
-            ctx.lineWidth = 5;
-            ctx.shadowColor = trailColors[i];
-            ctx.shadowBlur = 13;
-            ctx.stroke();
-        }
-        ctx.restore();
-
-        // Những đốm sáng vuông nhỏ nằm trên vệt cầu vồng
-        ctx.save();
-        for (const p of victoryTrail) {
-            ctx.globalAlpha = Math.max(0, p.life) * 0.85;
-            ctx.fillStyle = p.color;
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 13;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-        }
-        ctx.restore();
-
-        // Hạt vuông vàng bay tung tóe
-        ctx.save();
-        for (const p of victoryBurst) {
-            ctx.globalAlpha = Math.max(0, p.life);
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rotation);
-            ctx.fillStyle = p.color;
-            ctx.shadowColor = "#fff176";
-            ctx.shadowBlur = 12;
-            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-        }
-        ctx.restore();
-
-        // Các hạt vuông vàng lấp lánh trong nền
-        ctx.save();
+        // Confetti liên tục rơi
         for (const p of winParticles) {
-            ctx.globalAlpha = p.alpha;
+            ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rotation);
             ctx.fillStyle = p.color;
             ctx.shadowColor = p.color;
-            ctx.shadowBlur = 8;
-            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.shadowBlur = 12;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.8);
+            ctx.restore();
         }
-        ctx.restore();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
 
-        // Banner mở khóa icon ở phía trên giống video mẫu
-        const bannerW = Math.min(390, canvas.width * 0.48);
-        const bannerH = 48;
-        const bannerX = (canvas.width - bannerW) / 2;
-        const bannerY = 28;
+        // Vòng cổng chiến thắng phát sáng
+        const cx = canvas.width / 2;
+        const cy = canvas.height * 0.34;
         ctx.save();
-        ctx.fillStyle = "#7a3e20";
-        ctx.strokeStyle = "#f8d59b";
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 34 + 10 * Math.sin(t / 150);
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 82 + 6 * Math.sin(t / 180), 112 + 6 * Math.sin(t / 180), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "#ff4fd8";
         ctx.lineWidth = 3;
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 8;
-        ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
-        ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff4dc";
-        ctx.textAlign = "center";
-        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px monospace`;
-        ctx.fillText("▣  STEREO MADNESS!", canvas.width / 2, bannerY + 19);
-        ctx.font = `bold ${Math.min(14, canvas.width * 0.012)}px monospace`;
-        ctx.fillText("Unlocked new icon!", canvas.width / 2, bannerY + 37);
-        ctx.restore();
-
-        // Chữ LEVEL COMPLETE xanh lá kiểu pixel game
-        ctx.save();
-        ctx.textAlign = "center";
-        ctx.font = `900 ${Math.min(58, canvas.width * 0.052)}px monospace`;
-        ctx.lineJoin = "round";
-        ctx.lineWidth = 7;
-        ctx.strokeStyle = "#164b17";
-        ctx.shadowColor = "#83ff35";
-        ctx.shadowBlur = 18;
-        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
-        ctx.fillStyle = "#7cff35";
-        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#d6ff9d";
-        ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 62, 91, 0, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
 
         ctx.textAlign = "center";
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 22;
         ctx.fillStyle = "#ffffff";
-        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px monospace`;
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 5;
-        ctx.fillText("100%  •  Nhấn SPACE hoặc Click để chơi lại", canvas.width * 0.5, canvas.height * 0.88);
+        ctx.font = `900 ${Math.min(66, canvas.width * 0.055)}px Arial`;
+        ctx.fillText("LEVEL COMPLETE!", cx, canvas.height * 0.62);
         ctx.shadowBlur = 0;
+        ctx.fillStyle = "#7cffef";
+        ctx.font = `bold ${Math.min(30, canvas.width * 0.025)}px Arial`;
+        ctx.fillText("100%  •  Bạn đã vượt qua màn chơi!", cx, canvas.height * 0.70);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.min(22, canvas.width * 0.019)}px Arial`;
+        ctx.fillText("Nhấn SPACE hoặc Click để chơi lại", cx, canvas.height * 0.80);
     }
 
 }
