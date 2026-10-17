@@ -1225,13 +1225,8 @@ function draw() {
     if (gameState === "VICTORY") {
         const t = performance.now() - winStarted;
 
-        // Nền xanh đen kiểu Geometry Dash, không còn nền hồng tím.
-        const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bg.addColorStop(0, "#020719");
-        bg.addColorStop(0.55, "#07143b");
-        bg.addColorStop(1, "#020617");
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Giữ nền xanh đen, núi hình học, thành phố neon và mặt đất đã vẽ.
+        // Không phủ lại bằng nền tím hoặc một ảnh nền cũ.
 
         // Cổng cyan ở trung tâm hiệu ứng chiến thắng.
         const gx = canvas.width * 0.62;
@@ -1379,27 +1374,7 @@ function draw() {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // Banner mở khóa icon ở phía trên giống video mẫu
-        const bannerW = Math.min(390, canvas.width * 0.48);
-        const bannerH = 48;
-        const bannerX = (canvas.width - bannerW) / 2;
-        const bannerY = 28;
-        ctx.save();
-        ctx.fillStyle = "#7a3e20";
-        ctx.strokeStyle = "#f8d59b";
-        ctx.lineWidth = 3;
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 8;
-        ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
-        ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff4dc";
-        ctx.textAlign = "center";
-        ctx.font = `bold ${Math.min(20, canvas.width * 0.017)}px monospace`;
-        ctx.fillText("▣  STEREO MADNESS!", canvas.width / 2, bannerY + 19);
-        ctx.font = `bold ${Math.min(14, canvas.width * 0.012)}px monospace`;
-        ctx.fillText("Unlocked new icon!", canvas.width / 2, bannerY + 37);
-        ctx.restore();
+        // Không dùng banner/ảnh cũ; tập trung vào cổng FINISH và hiệu ứng hoàn thành.
 
         // Chữ LEVEL COMPLETE xanh lá kiểu pixel game
         ctx.save();
@@ -1412,7 +1387,7 @@ function draw() {
         ctx.shadowBlur = 18;
         ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
         ctx.fillStyle = "#7cff35";
-        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
+        ctx.fillText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.31);
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#d6ff9d";
         ctx.strokeText("LEVEL COMPLETE!", canvas.width * 0.5, canvas.height * 0.70);
