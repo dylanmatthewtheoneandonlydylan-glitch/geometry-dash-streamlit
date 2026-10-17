@@ -4,7 +4,7 @@ import base64
 
 st.set_page_config(
     page_title="Geometry Dash Custom Skin",
-    layout="centered"
+    layout="wide"
 )
 
 st.title("🏃 Geometry Dash - Custom Face Edition")
@@ -39,29 +39,37 @@ game_html = """
 
 <style>
 
-body {
+html, body {
     margin: 0;
+    width: 100%;
     background: #0d0f18;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
     font-family: Arial, sans-serif;
     color: white;
     user-select: none;
+    overflow-x: hidden;
 }
-
+body {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    flex-direction: column;
+    padding: 8px 0 12px;
+    box-sizing: border-box;
+}
 canvas {
-    border: 4px solid #00f0ff;
-    box-shadow: 0 0 25px rgba(0,240,255,0.5);
-    border-radius: 8px;
+    display: block;
+    width: min(98vw, 1400px);
+    height: auto;
+    border: 3px solid #00f0ff;
+    box-shadow: 0 0 32px rgba(0,240,255,0.45);
+    border-radius: 10px;
     background: #000;
 }
-
 #info {
     margin-top: 10px;
-    font-size: 18px;
+    font-size: clamp(16px, 1.8vw, 22px);
     font-weight: bold;
+    text-align: center;
 }
 
 </style>
@@ -70,7 +78,7 @@ canvas {
 
 <body>
 
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+<canvas id="gameCanvas" width="1200" height="600"></canvas>
 
 <div id="info">
     Nhấn SPACE để bắt đầu!
@@ -137,11 +145,13 @@ trollImg.src = "TROLL_FACE_HERE";
 
 let gameState = "START";
 
-let speed = 6;
+let speed = 7;
 
 let distance = 0;
 let deathStarted = 0;
 let particles = [];
+let winParticles = [];
+let winStarted = 0;
 let screenShake = 0;
 
 function startDeathEffect(cx, cy) {
@@ -168,6 +178,24 @@ function startDeathEffect(cx, cy) {
     }
 }
 
+function startVictoryEffect() {
+    winStarted = performance.now();
+    winParticles = [];
+    const colors = ["#00f5ff", "#fff176", "#ff4fd8", "#ffffff", "#7cff6b", "#ff9f43"];
+    for (let i = 0; i < 150; i++) {
+        winParticles.push({
+            x: Math.random() * canvas.width,
+            y: -Math.random() * canvas.height * 0.8,
+            vx: (Math.random() - 0.5) * 3.5,
+            vy: 1.5 + Math.random() * 4.5,
+            size: 4 + Math.random() * 8,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - 0.5) * 0.18,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
+    }
+}
+
 
 // ============================================================
 // PLAYER
@@ -175,11 +203,11 @@ function startDeathEffect(cx, cy) {
 
 const player = {
 
-    x: 120,
+    x: 180,
 
-    y: 300,
+    y: 440,
 
-    size: 42,
+    size: 54,
 
     vy: 0,
 
@@ -194,9 +222,9 @@ const player = {
 };
 
 
-const floorY = 330;
+const floorY = 500;
 
-const LEVEL_LENGTH = 3500;
+const LEVEL_LENGTH = 5000;
 
 
 // ============================================================
@@ -365,6 +393,7 @@ function resetGame() {
 
     distance = 0;
     particles = [];
+    winParticles = [];
     screenShake = 0;
 
     activeObstacles =
@@ -392,6 +421,19 @@ function resetGame() {
 // ============================================================
 
 function update() {
+
+    if (gameState === "VICTORY") {
+        for (const p of winParticles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rotation += p.spin;
+            if (p.y > canvas.height + 20) {
+                p.y = -10;
+                p.x = Math.random() * canvas.width;
+            }
+        }
+        return;
+    }
 
     if (gameState === "DYING") {
         const elapsed = performance.now() - deathStarted;
@@ -516,6 +558,7 @@ function update() {
     if (distance >= LEVEL_LENGTH) {
 
         gameState = "VICTORY";
+        startVictoryEffect();
 
         stopMusic();
 
@@ -560,17 +603,19 @@ function drawBackground() {
     ctx.globalAlpha = 1;
 
     // Mặt trăng neon
-    const moonGlow = ctx.createRadialGradient(650, 95, 8, 650, 95, 70);
+    const moonX = canvas.width * 0.78;
+    const moonY = 120;
+    const moonGlow = ctx.createRadialGradient(moonX, moonY, 8, moonX, moonY, 92);
     moonGlow.addColorStop(0, "rgba(175,205,255,0.95)");
     moonGlow.addColorStop(0.58, "rgba(103,124,255,0.75)");
     moonGlow.addColorStop(1, "rgba(80,70,255,0)");
     ctx.fillStyle = moonGlow;
-    ctx.beginPath(); ctx.arc(650, 95, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX, moonY, 92, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#c9d8ff";
-    ctx.beginPath(); ctx.arc(650, 95, 36, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX, moonY, 49, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "rgba(112,135,220,0.35)";
-    ctx.beginPath(); ctx.arc(638, 84, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(663, 105, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX - 16, moonY - 13, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX + 17, moonY + 13, 15, 0, Math.PI * 2); ctx.fill();
 
     // Núi xa nhiều lớp tạo chiều sâu
     function mountainLayer(baseY, amp, step, color, parallax) {
@@ -681,21 +726,23 @@ function draw() {
     ctx.fillStyle =
         "rgba(255,255,255,0.2)";
 
+    const barWidth = Math.min(560, canvas.width * 0.48);
+    const barX = (canvas.width - barWidth) / 2;
     ctx.fillRect(
-        200,
-        15,
-        400,
-        10
+        barX,
+        20,
+        barWidth,
+        14
     );
 
 
     ctx.fillStyle = "#00ffcc";
 
     ctx.fillRect(
-        200,
-        15,
-        400 * progressRatio,
-        10
+        barX,
+        20,
+        barWidth * progressRatio,
+        14
     );
 
 
@@ -703,44 +750,46 @@ function draw() {
     // FINISH
     // ========================================================
 
-    let finishX =
-        LEVEL_LENGTH -
-        distance +
-        player.x;
+    // CỔNG KẾT THÚC kiểu Geometry Dash: khung neon + lõi năng lượng
+    const finishX = LEVEL_LENGTH - distance + player.x;
+    if (finishX > -140 && finishX < canvas.width + 180) {
+        const gateW = 82;
+        const gateH = 190;
+        const gateTop = floorY - gateH;
+        const pulse = 0.72 + 0.28 * Math.sin(performance.now() / 130);
 
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 30;
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.moveTo(finishX - gateW / 2, floorY);
+        ctx.lineTo(finishX - gateW / 2, gateTop + 34);
+        ctx.quadraticCurveTo(finishX - gateW / 2, gateTop, finishX, gateTop);
+        ctx.quadraticCurveTo(finishX + gateW / 2, gateTop, finishX + gateW / 2, gateTop + 34);
+        ctx.lineTo(finishX + gateW / 2, floorY);
+        ctx.stroke();
 
-    if (
-        finishX <
-        canvas.width + 100
-    ) {
+        const portalGrad = ctx.createLinearGradient(finishX - gateW / 2, 0, finishX + gateW / 2, 0);
+        portalGrad.addColorStop(0, "rgba(0,245,255,0.05)");
+        portalGrad.addColorStop(0.5, "rgba(120,70,255,0.55)");
+        portalGrad.addColorStop(1, "rgba(255,65,210,0.08)");
+        ctx.fillStyle = portalGrad;
+        ctx.fillRect(finishX - gateW / 2 + 5, gateTop + 8, gateW - 10, gateH - 8);
 
-        ctx.fillStyle = "#00ffcc";
-
-        ctx.shadowColor = "#00ffcc";
-
-        ctx.shadowBlur = 15;
-
-        ctx.fillRect(
-            finishX,
-            floorY - 130,
-            15,
-            130
-        );
-
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(finishX, gateTop + gateH * 0.48, 22 + 4 * pulse, 53 + 4 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.shadowBlur = 0;
-
         ctx.fillStyle = "#ffffff";
-
-        ctx.font = "bold 16px Arial";
-
-        ctx.textAlign = "left";
-
-        ctx.fillText(
-            "FINISH",
-            finishX - 15,
-            floorY - 140
-        );
-
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("FINISH", finishX, gateTop - 18);
+        ctx.restore();
     }
 
 
@@ -952,7 +1001,7 @@ function draw() {
         ctx.fillText(
             "FACE DASH - POP STAR EDITION",
             canvas.width / 2,
-            canvas.height / 2 - 20
+            canvas.height / 2 - 35
         );
 
 
@@ -963,7 +1012,7 @@ function draw() {
         ctx.fillText(
             "Nhấn SPACE hoặc Click chuột để bắt đầu!",
             canvas.width / 2,
-            canvas.height / 2 + 30
+            canvas.height / 2 + 25
         );
 
     }
@@ -993,7 +1042,7 @@ function draw() {
         ctx.fillStyle = "#ff0055";
 
         ctx.font =
-            "bold 42px Arial";
+            "bold 54px Arial";
 
         ctx.textAlign = "center";
 
@@ -1004,7 +1053,7 @@ function draw() {
         ctx.fillText(
             "GAME OVER",
             canvas.width / 2,
-            65
+            90
         );
 
         ctx.shadowBlur = 0;
@@ -1016,7 +1065,7 @@ function draw() {
 
         if (trollImg.complete) {
 
-            let trollSize = 190;
+            let trollSize = 220;
 
             ctx.drawImage(
                 trollImg,
@@ -1024,7 +1073,7 @@ function draw() {
                 canvas.width / 2 -
                 trollSize / 2,
 
-                90,
+                canvas.height * 0.25,
 
                 trollSize,
 
@@ -1044,7 +1093,7 @@ function draw() {
         ctx.fillText(
             "💀 Bạn đã chết!",
             canvas.width / 2,
-            315
+            canvas.height * 0.78
         );
 
 
@@ -1053,53 +1102,64 @@ function draw() {
         ctx.fillText(
             "Nhấn SPACE hoặc Click để chơi lại",
             canvas.width / 2,
-            350
+            canvas.height * 0.86
         );
 
     }
 
 
     // ========================================================
-    // 🏆 VICTORY
+    // 🏆 VICTORY: pháo giấy, ánh sáng và lời chúc mừng
     // ========================================================
-
     if (gameState === "VICTORY") {
+        const t = performance.now() - winStarted;
+        const flash = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t / 120));
+        ctx.fillStyle = `rgba(5, 8, 35, ${0.72 + flash})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle =
-            "rgba(0,0,0,0.8)";
+        // Confetti liên tục rơi
+        for (const p of winParticles) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 12;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.8);
+            ctx.restore();
+        }
 
-        ctx.fillRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-
-        ctx.fillStyle = "#00ffcc";
-
-        ctx.font =
-            "bold 36px Arial";
+        // Vòng cổng chiến thắng phát sáng
+        const cx = canvas.width / 2;
+        const cy = canvas.height * 0.34;
+        ctx.save();
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 34 + 10 * Math.sin(t / 150);
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 82 + 6 * Math.sin(t / 180), 112 + 6 * Math.sin(t / 180), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "#ff4fd8";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 62, 91, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
         ctx.textAlign = "center";
-
-        ctx.fillText(
-            "VICTORY! 100%",
-            canvas.width / 2,
-            canvas.height / 2 - 20
-        );
-
-
-        ctx.font = "20px Arial";
-
+        ctx.shadowColor = "#00f5ff";
+        ctx.shadowBlur = 22;
         ctx.fillStyle = "#ffffff";
-
-        ctx.fillText(
-            "Chúc mừng bạn đã hoàn thành màn chơi!",
-            canvas.width / 2,
-            canvas.height / 2 + 25
-        );
-
+        ctx.font = `900 ${Math.min(66, canvas.width * 0.055)}px Arial`;
+        ctx.fillText("LEVEL COMPLETE!", cx, canvas.height * 0.62);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#7cffef";
+        ctx.font = `bold ${Math.min(30, canvas.width * 0.025)}px Arial`;
+        ctx.fillText("100%  •  Bạn đã vượt qua màn chơi!", cx, canvas.height * 0.70);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.min(22, canvas.width * 0.019)}px Arial`;
+        ctx.fillText("Nhấn SPACE hoặc Click để chơi lại", cx, canvas.height * 0.80);
     }
 
 }
@@ -1160,5 +1220,5 @@ game_html = game_html.replace(
 
 components.html(
     game_html,
-    height=480
+    height=760
 )
