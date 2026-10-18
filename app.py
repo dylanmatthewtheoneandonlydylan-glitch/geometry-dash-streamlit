@@ -30,7 +30,6 @@ with open("trollface.png", "rb") as f:
 with open("player.png", "rb") as f:
     player_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
-# Đọc file ảnh nền sảnh chờ (Đảm bảo file ảnh nền của bạn đặt tên là bg.png trong cùng thư mục)
 try:
     with open("bg.png", "rb") as f:
         lobby_bg_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
@@ -95,7 +94,7 @@ canvas {
 <canvas id="gameCanvas" width="1200" height="600"></canvas>
 
 <div id="info">
-    Chọn EASY, NORMAL hoặc HARD để bắt đầu!
+    Hãy trả lời câu hỏi bắt buộc để tiếp tục!
 </div>
 
 
@@ -161,7 +160,7 @@ lobbyBgImg.src = "LOBBY_BG_HERE";
 // GAME STATE
 // ============================================================
 
-let gameState = "MENU";
+let gameState = "MODAL_QUESTION"; 
 let selectedDifficulty = "NORMAL";
 let menuDistance = 0;
 let menuCube = { x: 80, y: 0, vy: 0, rotation: 0, grounded: true, nextJump: 0 };
@@ -398,6 +397,7 @@ function jump() {
 
 window.addEventListener("keydown", function(e) {
     if (e.code === "Space" || e.code === "ArrowUp") {
+        if (gameState === "MODAL_QUESTION") return;
         e.preventDefault();
         if (gameState === "MENU") {
             resetGame();
@@ -415,6 +415,12 @@ canvas.addEventListener("mousedown", function(e) {
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * canvas.width / rect.width;
     const y = (e.clientY - rect.top) * canvas.height / rect.height;
+
+    if (gameState === "MODAL_QUESTION") {
+        handleModalClick(x, y);
+        return;
+    }
+
     if (gameState !== "MENU" && x >= 18 && x <= 145 && y >= 16 && y <= 62) {
         mouseHeld = false;
         goToMenu();
@@ -484,6 +490,10 @@ function resetGame() {
 // ============================================================
 
 function update() {
+    if (gameState === "MODAL_QUESTION") {
+        return;
+    }
+
     if (gameState === "MENU") {
         menuDistance += 3.2 * frameScale;
         menuCube.x += 2.4 * frameScale;
@@ -817,6 +827,93 @@ function drawBackground() {
 
 
 // ============================================================
+// MÀN HÌNH CÂU HỎI BẮT BUỘC ĐẦU GAME
+// ============================================================
+
+function drawModalQuestion() {
+    if (lobbyBgImg.complete && lobbyBgImg.naturalWidth !== 0) {
+        ctx.drawImage(lobbyBgImg, 0, 0, canvas.width, canvas.height);
+    } else {
+        drawBackground();
+    }
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.78)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const boxW = 760;
+    const boxH = 340;
+    const boxX = (canvas.width - boxW) / 2;
+    const boxY = (canvas.height - boxH) / 2;
+
+    ctx.save();
+    ctx.shadowColor = "#00ffff";
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = "#050d21";
+    ctx.strokeStyle = "#00f0ff";
+    ctx.lineWidth = 4;
+    roundRect(ctx, boxX, boxY, boxW, boxH, 24, true, true);
+    ctx.shadowBlur = 0;
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 29px monospace";
+    ctx.shadowColor = "#ff39df";
+    ctx.shadowBlur = 12;
+    ctx.fillText("Trần Duy Long Có Bị Gay Không 🌈", canvas.width / 2, boxY + 75);
+    ctx.shadowBlur = 0;
+
+    const btnW = 290;
+    const btnH = 75;
+    const btnY = boxY + 165;
+    
+    const btn1X = boxX + 55;
+    ctx.fillStyle = "#00ff70";
+    ctx.shadowColor = "#00ff70";
+    ctx.shadowBlur = 15;
+    roundRect(ctx, btn1X, btnY, btnW, btnH, 16, true, false);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#06152c";
+    ctx.font = "bold 21px monospace";
+    ctx.fillText("Toi Dong Tinh", btn1X + btnW / 2, btnY + btnH / 2);
+
+    const btn2X = boxX + boxW - 55 - btnW;
+    ctx.fillStyle = "#ff1744";
+    ctx.shadowColor = "#ff1744";
+    ctx.shadowBlur = 15;
+    roundRect(ctx, btn2X, btnY, btnW, btnH, 16, true, false);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 21px monospace";
+    ctx.fillText("Toi Khong Dong Tinh", btn2X + btnW / 2, btnY + btnH / 2);
+
+    ctx.restore();
+}
+
+function handleModalClick(x, y) {
+    const boxW = 760;
+    const boxH = 340;
+    const boxX = (canvas.width - boxW) / 2;
+    const boxY = (canvas.height - boxH) / 2;
+    const btnW = 290;
+    const btnH = 75;
+    const btnY = boxY + 165;
+    const btn1X = boxX + 55;
+    const btn2X = boxX + boxW - 55 - btnW;
+
+    if (y >= btnY && y <= btnY + btnH) {
+        if (x >= btn1X && x <= btn1X + btnW) {
+            gameState = "MENU";
+            info.innerText = "Chọn EASY, NORMAL hoặc HARD để bắt đầu!";
+        } else if (x >= btn2X && x <= btn2X + btnW) {
+            gameState = "MENU";
+            info.innerText = "Chọn EASY, NORMAL hoặc HARD để bắt đầu!";
+        }
+    }
+}
+
+
+// ============================================================
 // SẢNH CHỜ (LOBBY)
 // ============================================================
 
@@ -876,9 +973,6 @@ function drawMenuCube(x, y, size, rotation, color) {
 }
 
 function drawLobby() {
-    // ----------------------------------------------------
-    // VẼ ẢNH NỀN SẢNH CHỜ
-    // ----------------------------------------------------
     if (lobbyBgImg.complete && lobbyBgImg.naturalWidth !== 0) {
         ctx.drawImage(lobbyBgImg, 0, 0, canvas.width, canvas.height);
     } else {
@@ -887,7 +981,6 @@ function drawLobby() {
 
     const pulse = 0.75 + Math.sin(performance.now() / 260) * 0.15;
 
-    // Header logo
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "900 64px monospace";
@@ -907,7 +1000,6 @@ function drawLobby() {
     ctx.font = "bold 22px monospace";
     ctx.fillText("— CUSTOM FACE EDITION —", canvas.width / 2, 132);
 
-    // Gear icon and best score
     ctx.strokeStyle = "#00dfff";
     ctx.lineWidth = 4;
     ctx.shadowColor = "#00dfff";
@@ -920,7 +1012,6 @@ function drawLobby() {
     ctx.fillText("BEST:", canvas.width - 40, 35);
     ctx.fillStyle = "#ffffff"; ctx.fillText("0%", canvas.width - 40, 58);
 
-    // Difficulty cards
     for (const card of menuCards) {
         const x = card.x, y = 178, w = 210, h = 240;
         const chosen = selectedDifficulty === card.id;
@@ -963,7 +1054,6 @@ function drawLobby() {
         ctx.restore();
     }
 
-    // Bottom runner lane
     const groundY = floorY;
     ctx.fillStyle = "rgba(4, 11, 37, 0.4)";
     ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
@@ -1037,19 +1127,21 @@ function drawMenuButton() {
 // ============================================================
 
 function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (gameState === "MODAL_QUESTION") {
+        drawModalQuestion();
+        return;
+    }
 
     if (gameState === "MENU") {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawLobby();
         return;
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     drawBackground();
     drawMenuButton();
 
-    // Floor
     const floorLineColor = selectedDifficulty === "NORMAL" ? "#ff8a35" : (selectedDifficulty === "HARD" ? "#28f5ff" : "#e5fbff");
     ctx.fillStyle = floorLineColor;
     ctx.shadowColor = floorLineColor;
@@ -1071,7 +1163,6 @@ function draw() {
     ctx.fillStyle = floorGrad;
     ctx.fillRect(0, floorY + 4, canvas.width, canvas.height - floorY);
 
-    // Progress Bar
     let progressRatio = Math.min(1, distance / LEVEL_LENGTH);
     ctx.fillStyle = "rgba(255,255,255,0.2)";
     const barWidth = Math.min(560, canvas.width * 0.48);
@@ -1080,7 +1171,6 @@ function draw() {
     ctx.fillStyle = "#00ffcc";
     ctx.fillRect(barX, 20, barWidth * progressRatio, 14);
 
-    // Finish Portal
     const finishTargetX = canvas.width * 0.62;
     const finishX = (gameState === "WINNING" || gameState === "VICTORY")
         ? finishTargetX
@@ -1150,7 +1240,6 @@ function draw() {
         ctx.restore();
     }
 
-    // Obstacles
     for (let obs of activeObstacles) {
         let currentX = obs.x - distance + player.x;
 
@@ -1214,7 +1303,6 @@ function draw() {
         }
     }
 
-    // Dying Effect
     if (gameState === "DYING") {
         ctx.save();
         for (const p of particles) {
@@ -1232,7 +1320,6 @@ function draw() {
         ctx.shadowBlur = 0;
     }
 
-    // Winning Trail
     if (gameState === "WINNING") {
         ctx.save();
         for (const p of victoryTrail) {
@@ -1249,7 +1336,6 @@ function draw() {
         ctx.shadowBlur = 0;
     }
 
-    // Player
     if (gameState !== "DYING" && gameState !== "GAMEOVER" && gameState !== "VICTORY") {
         ctx.save();
         ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
@@ -1271,7 +1357,6 @@ function draw() {
         ctx.restore();
     }
 
-    // Start Screen
     if (gameState === "START") {
         ctx.fillStyle = "rgba(0,0,0,0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1286,7 +1371,6 @@ function draw() {
         ctx.fillText("Nhấn SPACE hoặc Click chuột để bắt đầu!", canvas.width / 2, canvas.height / 2 + 25);
     }
 
-    // Game Over
     if (gameState === "GAMEOVER") {
         ctx.fillStyle = "rgba(0,0,0,0.75)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1312,7 +1396,6 @@ function draw() {
         ctx.fillText("Nhấn SPACE hoặc Click để chơi lại", canvas.width / 2, canvas.height * 0.86);
     }
 
-    // Victory
     if (gameState === "VICTORY") {
         const t = performance.now() - winStarted;
         const gx = canvas.width * 0.62;
@@ -1466,7 +1549,7 @@ function draw() {
         ctx.shadowBlur = 0;
     }
 
-    if (gameState !== "MENU") drawMenuButton();
+    if (gameState !== "MENU" && gameState !== "MODAL_QUESTION") drawMenuButton();
 }
 
 
@@ -1498,7 +1581,7 @@ gameLoop();
 
 game_html = game_html.replace("MUSIC_URL_HERE", music_url)
 game_html = game_html.replace("DEATH_SOUND_HERE", death_url)
-game_html = game_html.replace("VICTORY_SOUND_HERE", victory_url)
+game_html = game_html.replace("VICTORY_URL_HERE", victory_url)
 game_html = game_html.replace("TROLL_FACE_HERE", troll_url)
 game_html = game_html.replace("PLAYER_IMAGE_HERE", player_url)
 game_html = game_html.replace("LOBBY_BG_HERE", lobby_bg_url)
