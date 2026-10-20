@@ -1617,10 +1617,12 @@ gameLoop();
 # GẮN FILE VÀO HTML
 # ============================================================
 
+# Thay placeholder nhạc sảnh TRƯỚC nhạc chơi game vì tên placeholder
+# LOBBY_MUSIC_URL_HERE có chứa chuỗi MUSIC_URL_HERE.
+game_html = game_html.replace("LOBBY_MUSIC_URL_HERE", lobby_music_url)
 game_html = game_html.replace("MUSIC_URL_HERE", music_url)
 game_html = game_html.replace("DEATH_SOUND_HERE", death_url)
 game_html = game_html.replace("VICTORY_SOUND_HERE", victory_url)
-game_html = game_html.replace("LOBBY_MUSIC_URL_HERE", lobby_music_url)
 game_html = game_html.replace("TROLL_FACE_HERE", troll_url)
 game_html = game_html.replace("PLAYER_IMAGE_HERE", player_url)
 game_html = game_html.replace("LOBBY_BG_HERE", lobby_bg_url)
