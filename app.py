@@ -24,6 +24,9 @@ with open("vine-boom.mp3", "rb") as f:
 with open("final-fantasy-vii-victory-fanfare-1.mp3", "rb") as f:
     victory_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
 
+with open("lobby-music.mp3", "rb") as f:
+    lobby_music_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
+
 with open("trollface.png", "rb") as f:
     troll_url = "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
@@ -117,6 +120,13 @@ canvas {
     preload="auto">
 </audio>
 
+<audio
+    id="lobbyMusic"
+    src="LOBBY_MUSIC_URL_HERE"
+    loop
+    preload="auto">
+</audio>
+
 
 <script>
 
@@ -136,10 +146,12 @@ const info = document.getElementById("info");
 const bgMusic = document.getElementById("bgMusic");
 const deathSound = document.getElementById("deathSound");
 const victorySound = document.getElementById("victorySound");
+const lobbyMusic = document.getElementById("lobbyMusic");
 
 bgMusic.volume = 0.5;
 deathSound.volume = 0.8;
-victorySound.volume = 0.9;
+victorySound.volume = 1.0;
+lobbyMusic.volume = 0.35;
 
 
 // ============================================================
@@ -337,7 +349,22 @@ let activeObstacles = [];
 // AUDIO CONTROLS
 // ============================================================
 
+function playLobbyMusic() {
+    bgMusic.pause();
+    victorySound.pause();
+    lobbyMusic.play().catch(function(error) {
+        console.log("Lobby music blocked:", error);
+    });
+}
+
+function stopLobbyMusic() {
+    lobbyMusic.pause();
+    lobbyMusic.currentTime = 0;
+}
+
 function playMusic() {
+    stopLobbyMusic();
+    stopVictorySound();
     bgMusic.currentTime = 0;
     bgMusic.play().catch(function(error) { console.log("Music blocked:", error); });
 }
@@ -353,9 +380,16 @@ function playDeathSound() {
 }
 
 function playVictorySound() {
+    stopMusic();
+    stopLobbyMusic();
     victorySound.pause();
     victorySound.currentTime = 0;
-    victorySound.play().catch(function(error) { console.log("Victory sound blocked:", error); });
+    const result = victorySound.play();
+    if (result && typeof result.catch === "function") {
+        result.catch(function(error) {
+            console.error("Không phát được nhạc FINISH:", error);
+        });
+    }
 }
 
 function stopVictorySound() {
@@ -440,7 +474,9 @@ window.addEventListener("blur", function() { mouseHeld = false; });
 function goToMenu() {
     stopMusic(); stopVictorySound();
     deathSound.pause(); deathSound.currentTime = 0;
-    gameState = "MENU"; distance = 0;
+    gameState = "MENU";
+    playLobbyMusic();
+    distance = 0;
     particles = []; winParticles = []; victoryTrail = []; victoryBurst = [];
     menuCube.x = 80; menuCube.y = floorY - 44; menuCube.vy = 0;
     menuCube.grounded = true; menuCube.nextJump = performance.now() + 300;
@@ -904,9 +940,11 @@ function handleModalClick(x, y) {
     if (y >= btnY && y <= btnY + btnH) {
         if (x >= btn1X && x <= btn1X + btnW) {
             gameState = "MENU";
+            playLobbyMusic();
             info.innerText = "Chọn EASY, NORMAL hoặc HARD để bắt đầu!";
         } else if (x >= btn2X && x <= btn2X + btnW) {
             gameState = "MENU";
+            playLobbyMusic();
             info.innerText = "Chọn EASY, NORMAL hoặc HARD để bắt đầu!";
         }
     }
@@ -1581,7 +1619,8 @@ gameLoop();
 
 game_html = game_html.replace("MUSIC_URL_HERE", music_url)
 game_html = game_html.replace("DEATH_SOUND_HERE", death_url)
-game_html = game_html.replace("VICTORY_URL_HERE", victory_url)
+game_html = game_html.replace("VICTORY_SOUND_HERE", victory_url)
+game_html = game_html.replace("LOBBY_MUSIC_URL_HERE", lobby_music_url)
 game_html = game_html.replace("TROLL_FACE_HERE", troll_url)
 game_html = game_html.replace("PLAYER_IMAGE_HERE", player_url)
 game_html = game_html.replace("LOBBY_BG_HERE", lobby_bg_url)
