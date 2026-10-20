@@ -27,9 +27,6 @@ with open("final-fantasy-vii-victory-fanfare-1.mp3", "rb") as f:
 with open("lobby-music.mp3", "rb") as f:
     lobby_music_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
 
-with open("LIMBO - Full Level Showcase.mp3", "rb") as f:
-    limbo_music_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
-
 with open("4K -Tidal Wave- (TOP 1 Extreme Demon) by OniLink - Geometry Dash 2.11.mp3", "rb") as f:
     tidal_wave_music_url = "data:audio/mpeg;base64," + base64.b64encode(f.read()).decode()
 
@@ -134,13 +131,6 @@ canvas {
 </audio>
 
 <audio
-    id="limboMusic"
-    src="LIMBO_MUSIC_URL_HERE"
-    loop
-    preload="auto">
-</audio>
-
-<audio
     id="tidalWaveMusic"
     src="TIDAL_WAVE_MUSIC_URL_HERE"
     loop
@@ -167,14 +157,12 @@ const bgMusic = document.getElementById("bgMusic");
 const deathSound = document.getElementById("deathSound");
 const victorySound = document.getElementById("victorySound");
 const lobbyMusic = document.getElementById("lobbyMusic");
-const limboMusic = document.getElementById("limboMusic");
 const tidalWaveMusic = document.getElementById("tidalWaveMusic");
 
 bgMusic.volume = 0.5;
 deathSound.volume = 0.8;
 victorySound.volume = 1.0;
 lobbyMusic.volume = 0.35;
-limboMusic.volume = 0.5;
 tidalWaveMusic.volume = 0.5;
 
 
@@ -374,7 +362,7 @@ let activeObstacles = [];
 // ============================================================
 
 function stopLevelMusic() {
-    [bgMusic, limboMusic, tidalWaveMusic].forEach(function(track) {
+    [bgMusic, tidalWaveMusic].forEach(function(track) {
         track.pause();
         track.currentTime = 0;
     });
@@ -398,12 +386,8 @@ function playMusic() {
     stopLevelMusic();
     stopVictorySound();
 
-    let selectedTrack = bgMusic;
-    if (selectedDifficulty === "NORMAL") {
-        selectedTrack = limboMusic;
-    } else if (selectedDifficulty === "HARD") {
-        selectedTrack = tidalWaveMusic;
-    }
+    // Màn 1 và màn 2 giữ nhạc gốc; chỉ màn 3 dùng Tidal Wave.
+    let selectedTrack = selectedDifficulty === "HARD" ? tidalWaveMusic : bgMusic;
 
     selectedTrack.currentTime = 0;
     selectedTrack.play().catch(function(error) {
@@ -1660,7 +1644,6 @@ gameLoop();
 # Thay placeholder nhạc sảnh TRƯỚC nhạc chơi game vì tên placeholder
 # LOBBY_MUSIC_URL_HERE có chứa chuỗi MUSIC_URL_HERE.
 game_html = game_html.replace("LOBBY_MUSIC_URL_HERE", lobby_music_url)
-game_html = game_html.replace("LIMBO_MUSIC_URL_HERE", limbo_music_url)
 game_html = game_html.replace("TIDAL_WAVE_MUSIC_URL_HERE", tidal_wave_music_url)
 game_html = game_html.replace("MUSIC_URL_HERE", music_url)
 game_html = game_html.replace("DEATH_SOUND_HERE", death_url)
